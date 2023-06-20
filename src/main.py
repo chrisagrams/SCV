@@ -1,9 +1,13 @@
+import os
 import sqlite3
+from dotenv import load_dotenv
 from fastapi import FastAPI, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+load_dotenv()  # load environmental variables from .env
+
+app = FastAPI()  # create FastAPI instance
 
 
 # app.mount("/", StaticFiles(directory="./static"), name="static")
@@ -15,7 +19,7 @@ class scvDB:
     @classmethod
     def get_connection(cls):
         if cls._db is None:
-            cls._db = sqlite3.connect('./db/SCV.db')
+            cls._db = sqlite3.connect(os.getenv('DB_PATH'))
         return cls._db
 
 
@@ -54,4 +58,3 @@ async def get_protein_list(job: str = Form(None)):
         return result
     else:
         return {"error": "No matching job number found."}
-
