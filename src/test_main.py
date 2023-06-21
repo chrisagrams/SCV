@@ -31,3 +31,8 @@ def test_echo():
 #         "background_color": "1",
 #         "pdb_dest": "1"
 #     }
+
+def test_get_invalid_protein_list():
+    response = client.post("/protein-list", data={"job": "00000000-0000-0000-0000-000000000000"})
+    assert response.status_code == 404
+    assert response.json() == {"error": "No matching job number found."}
