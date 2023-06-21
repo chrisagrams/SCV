@@ -1,16 +1,21 @@
+import time
 import os
 import logging
 import sqlite3
 import uuid
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from models import JobModel
+
 
 load_dotenv()  # load environmental variables from .env
 
-app = FastAPI()  # create FastAPI instance
+app = FastAPI(
+    title="scvAPI",
+    description="API for the SCV web application.",
+    version="0.1.0",
+)  # create FastAPI instance
 
 logger = logging.getLogger("uvicorn")  # create logger
 
@@ -22,19 +27,45 @@ class scvDB:
     def get_connection(cls):
         if cls._db is None:
             try:
-                cls._db = sqlite3.connect(os.getenv('DB_PATH'))
+                db_path = os.getenv('DB_PATH')
+                if not os.path.exists(db_path):
+                    cls._create_database(db_path)
+                cls._db = sqlite3.connect(db_path)
             except sqlite3.Error as e:
                 logger.error(e)
                 return None
         return cls._db
 
+    @classmethod
+    def _create_database(cls, db_path):
+        conn = sqlite3.connect(db_path)
+        cls._create_access_table(conn)
 
-class JobModel(BaseModel):
-    # job_number: str = None
-    psms: dict = None
-    ptms: dict = None
-    background_color: int = None
-    species: str = None
+    @classmethod
+    def _create_access_table(cls, conn):
+        cursor = conn.cursor()
+        # Create the "access" table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS access (
+                ip TEXT,
+                timestamp TEXT,
+                path TEXT
+            )
+        ''')
+        conn.commit()
+
+    @classmethod
+    def add_access(cls, ip, timestamp, path):
+        db = cls.get_connection()
+        if db is None:
+            return
+        try:
+            cursor = db.cursor()
+            cursor.execute("INSERT INTO access VALUES (?, ?, ?)", (ip, timestamp, path))
+            db.commit()
+            cursor.close()
+        except sqlite3.Error as e:
+            raise e
 
 @app.on_event("startup")
 async def startup_event():
@@ -62,7 +93,13 @@ async def echo(job: str = Form(None)):
 
 
 @app.post("/job")
-async def submit_job(job: JobModel):
+async def submit_job(job: JobModel, request: Request):
+    try:
+        scvDB.add_access(request.client.host, time.time(), request.url.path)
+    except sqlite3.Error as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
     logger.debug(f"Received job: {job}")
     return {"job_number": uuid.uuid4()}
 

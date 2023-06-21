@@ -426,7 +426,7 @@
         let ptms = get_selected_ptms();
         let body = {
             psms: psm_ptm_test(document.querySelector("#psm_textarea").value),
-            ptms: ptms,
+            ptm_annotations: ptms,
             background_color: get_glmol_color(document.querySelector('#background_color').value),
             species: species_menu.value
         };
@@ -441,8 +441,22 @@
         .then(async response => {
             if (response.ok)
                 return response.json();
-            else
-                throw new Error(await response.json());
+            else {
+                let decoder = new TextDecoder("utf-8");
+                let reader = response.body.getReader();
+                let response_text = "";
+
+                try {
+                    while (true) {
+                        let {done, value} = await reader.read();
+                        if (done) break;
+                        response_text += decoder.decode(value);
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
+                throw new Error(response_text);
+            }
         })
         .then(json => {
             console.log("received:" + json);
