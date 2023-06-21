@@ -1,6 +1,5 @@
 # SCV - Sequence Coverage Visualizer
-![master](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=master)
-
+[![SCV API Tests](https://github.com/chrisagrams/SCV_V1.1/actions/workflows/api_test.yaml/badge.svg)](https://github.com/chrisagrams/SCV_V1.1/actions/workflows/api_test.yaml)
 A web application for protein sequence coverage 3D visualization.
 
 ## Publication
