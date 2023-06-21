@@ -16,8 +16,8 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag SCV:$(date +%s)
+      run: docker build . --file Dockerfile --tag scv:$(date +%s)
       
     - name: Run pytest
-      run: docker run --name scv_test_container SCV:latest /bin/sh -c "pip install pytest && pytest"
+      run: docker run --name scv_test_container scv:latest /bin/sh -c "pytest"
           
