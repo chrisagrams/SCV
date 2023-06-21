@@ -10,9 +10,6 @@ load_dotenv()  # load environmental variables from .env
 app = FastAPI()  # create FastAPI instance
 
 
-# app.mount("/", StaticFiles(directory="./static"), name="static")
-
-
 class scvDB:
     _db = None
 
@@ -36,6 +33,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/test")
+async def echo(job: str = Form(None)):
+    """
+    Basic test to ensure API is responding to requests. Echoes back the job ID that was sent in the request.
+    :param job: job ID    :return:
+    """
+    return {"job": job}
 
 
 @app.post("/protein-list")
