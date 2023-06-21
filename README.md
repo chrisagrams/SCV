@@ -1,4 +1,5 @@
 # SCV - Sequence Coverage Visualizer
+![master](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=master)
 
 A web application for protein sequence coverage 3D visualization.
 
