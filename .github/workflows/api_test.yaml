@@ -19,5 +19,5 @@ jobs:
       run: docker build . --file Dockerfile --tag scv:$(date +%s)
       
     - name: Run pytest
-      run: docker run --name scv_test_container SCV:latest /bin/sh -c "pip install pytest && pytest"
+      run: docker run --name scv_test_container scv:latest /bin/sh -c "pytest"
           
