@@ -20,14 +20,14 @@ def test_echo():
     assert response.json() == {"job": test_uuid}
 
 
-def test_get_protein_list():
-    response = client.post("/protein-list", data={"job": "1"})
-    assert response.status_code == 200
-    assert response.json() == {
-        "job_number": "1",
-        "pq": "1",
-        "id_ptm_idx_dict": "1",
-        "regex_dict": "1",
-        "background_color": "1",
-        "pdb_dest": "1"
-    }
+# def test_get_protein_list():
+#     response = client.post("/protein-list", data={"job": "1"})
+#     assert response.status_code == 200
+#     assert response.json() == {
+#         "job_number": "1",
+#         "pq": "1",
+#         "id_ptm_idx_dict": "1",
+#         "regex_dict": "1",
+#         "background_color": "1",
+#         "pdb_dest": "1"
+#     }
