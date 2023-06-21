@@ -1,6 +1,12 @@
 # SCV - Sequence Coverage Visualizer
 
-Source files for the SCV web application.
+A web application for protein sequence coverage 3D visualization.
+
+## Publication
+
+- "Sequence Coverage Visualizer: A Web Application for Protein Sequence Coverage 3D Visualization" by Xinhao Shao, Christopher Grams, and Yu Gao.
+   Published in Journal of Proteomics, 2023.
+   [Link to publication](https://doi.org/10.1021/acs.jproteome.2c00358)
 
 ## Table of Contents
 
