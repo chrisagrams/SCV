@@ -185,7 +185,7 @@
     }
 
 
-    document.querySelector('#nextDiv').addEventListener("click", e => {new_send_request();});
+    document.querySelector('#nextDiv').addEventListener("click", e => {send_job();});
 
     let checkbox_template = document.createElement('div');
     checkbox_template.classList.add('mdc-touch-target-wrapper');
@@ -422,61 +422,38 @@
         }, 5000);
     }
 
-    const new_send_request = () => {
+    const send_job = () => {
         let ptms = get_selected_ptms();
-        let form = new FormData();
-        form.append('job_number', uuidv4());
-        form.append('psms', JSON.stringify(psm_ptm_test(document.querySelector("#psm_textarea").value)));
-        form.append('ptms', JSON.stringify(ptms));
-        form.append('background_color', get_glmol_color(document.querySelector('#background_color').value));
-        Array.from(document.querySelector("#user_upload").files).forEach(file => {
-            form.append('user_upload', file);
-        });
-        form.append('species', species_menu.value);
+        let body = {
+            psms: psm_ptm_test(document.querySelector("#psm_textarea").value),
+            ptms: ptms,
+            background_color: get_glmol_color(document.querySelector('#background_color').value),
+            species: species_menu.value
+        };
+
         fetch('/job', {
             method: 'POST',
-            body: form
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
         })
-            .then(async response => {
-                if (response.ok)
-                    return response.text();
-                else
-                    throw new Error(await response.text());
-            })
-            .then(text => {
-                    console.log("received:" + text);
-                    transition_to_submitted(text);
-            })
-            .catch(error => {
-                console.error(error);
-                show_error("Internal server error: " + error.message);
-            });
-
-    }
-
-
-    const send_request = () => {
-        let newline_list = cleanup_newline_list(document.querySelector('#psm_textarea').value);
-        let ptms = get_selected_ptms();
-        let form = new FormData();
-        form.append('job_number', uuidv4());
-        form.append('psms', newline_list);
-        form.append('ptms', JSON.stringify(ptms));
-        form.append('background_color', get_glmol_color(document.querySelector('#background_color').value));
-        Array.from(document.querySelector("#user_upload").files).forEach(file => {
-            form.append('user_upload', file);
+        .then(async response => {
+            if (response.ok)
+                return response.json();
+            else
+                throw new Error(await response.json());
+        })
+        .then(json => {
+            console.log("received:" + json);
+            transition_to_submitted(json['job_number']);
+        })
+        .catch(error => {
+            console.error(error);
+            show_error("Internal server error: " + error.message);
         });
-        form.append('species', species_menu.value);
-        fetch('/job', {
-            method: 'POST',
-            body: form
-        })
-            .then(response => response.text())
-            .then(text => {
-                console.log("received:" + text);
-                transition_to_submitted(text);
-            });
     }
+
 
     const psm_textfield = new mdc.textField.MDCTextField(document.querySelector('.mdc-text-field'));
     const species_menu = new mdc.select.MDCSelect(document.querySelector('.mdc-select'));

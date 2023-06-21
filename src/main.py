@@ -1,16 +1,19 @@
 import os
 import logging
 import sqlite3
+import uuid
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 load_dotenv()  # load environmental variables from .env
 
 app = FastAPI()  # create FastAPI instance
 
 logger = logging.getLogger("uvicorn")  # create logger
+
 
 class scvDB:
     _db = None
@@ -25,6 +28,13 @@ class scvDB:
                 return None
         return cls._db
 
+
+class JobModel(BaseModel):
+    # job_number: str = None
+    psms: dict = None
+    ptms: dict = None
+    background_color: int = None
+    species: str = None
 
 @app.on_event("startup")
 async def startup_event():
@@ -49,6 +59,12 @@ async def echo(job: str = Form(None)):
     """
     logger.info(f"/test received job ID: {job}")
     return {"job": job}
+
+
+@app.post("/job")
+async def submit_job(job: JobModel):
+    logger.debug(f"Received job: {job}")
+    return {"job_number": uuid.uuid4()}
 
 
 @app.post("/protein-list")
