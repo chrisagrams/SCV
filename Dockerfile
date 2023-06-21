@@ -1,6 +1,15 @@
 # Start from the official Python base image.
 FROM python:3.9
 
+# Copy the src directory into the container
+COPY ./src /src
+
+# Copy .env file into the container at /src
+COPY .env /src
+
+# Copy static directory into the container at /src
+COPY static /src/static
+
 # Set the working directory to /src
 WORKDIR /src
 
@@ -21,6 +30,9 @@ RUN rm -v /etc/nginx/nginx.conf
 
 # Copy the custom Nginx configuration file
 COPY nginx.conf /etc/nginx/nginx.conf
+
+# Set permissions for static directory
+RUN chown -R nginx:nginx /src/static
 
 # Validate the Nginx configuration
 RUN nginx -t
