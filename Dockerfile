@@ -10,6 +10,12 @@ COPY .env /src
 # Copy static directory into the container at /src
 COPY static /src/static
 
+# Copy vendor directory into the container at /src
+COPY vendor /src/vendor
+
+# Make db directory
+RUN mkdir /db
+
 # Set the working directory to /src
 WORKDIR /src
 

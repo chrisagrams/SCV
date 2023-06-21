@@ -34,8 +34,8 @@ To run this project locally using Docker, follow the steps below:
    docker build -t scv .
    ```
 
-3. Run the Docker container, forwarding port 80 to 8080 (or any other port you wish to use):
+3. Run the Docker container, forwarding port 80 to 8080 (or any other port you wish to use) and attaching the db folder to the container:
 
    ```bash
-   docker run -d -p 8080:80 scv
+   docker run -v ./db:/db -d -p 8080:80 scv
    ```
