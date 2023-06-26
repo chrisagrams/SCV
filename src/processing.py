@@ -111,21 +111,18 @@ def process_aho_result(aho_result, ptm_index_line_dict, peptide_psm_dict, psm_gr
 
                 # then label each PTM inside each PSM
                 for ptm in ptm_index_line_dict:
-                    new_psm = re.sub('n?\[\d+\.?\d+\]', '', ptm)  # remove all PTM
-                    ptm_mod = re.findall(ptm, new_psm)  # find all PTM
+                    # Create a pattern for regex operation
+                    ptm_pattern = re.escape(ptm)
 
-                    if ptm_mod:  # if PTM exists
+                    # Find all occurrences of ptm in psm
+                    ptm_occurrences = [m.start() for m in re.finditer(ptm_pattern, psm)]
 
-                        for ele in ptm_mod:  # for each PTM
-                            num_of_mod = len(
-                                re.findall(ele.replace('[', '\[').replace(']', '\]').replace('.', '\.'), new_psm))
-                            PTM_index = [m.start() for m in
-                                         re.finditer(ele.replace('[', '\[').replace(']', '\]').replace('.', '\.'),
-                                                     new_psm)]
-                            PTM_index_clean = [ind - num * (len(ele) - 1) for ind, num in
-                                               zip(PTM_index, range(num_of_mod))]
-                            for indx in PTM_index_clean:
-                                ptm_index_line_dict[ptm][tp[0] + indx] += 1
+                    # Adjust the index for occurrences
+                    adjusted_occurrences = [ind - i * (len(ptm) - 1) for i, ind in enumerate(ptm_occurrences)]
+
+                    # Increment the count in ptm_index_line_dict
+                    for indx in adjusted_occurrences:
+                        ptm_index_line_dict[ptm][tp[0] + indx] += 1
     return zero_line, ptm_index_line_dict
 
 
@@ -166,7 +163,9 @@ def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, 
                         np.array(np.nonzero(ptm_index_line_dict[ptm][sep_pos_array[i] + 1:sep_pos_array[i + 1]]))[
                             0].tolist()
                     if len(idx_list) > 0:  # only add if there is ptm
-                        id_ptm_idx_dict[id_list[i]] = {ptm: idx_list}
+                        if id_list[i] not in id_ptm_idx_dict:
+                            id_ptm_idx_dict[id_list[i]] = {}
+                        id_ptm_idx_dict[id_list[i]].update({ptm: idx_list})
 
     print('Time used for calculating coverage and ptm: ', time.time() - start_time)
 
@@ -205,44 +204,44 @@ def freq_ptm_index_gen_batch(psms, ptm_annotations, protein_dict, pdbs):
 
 if __name__ == "__main__":
     fasta_file = "C:\\Users\\Chris\\Downloads\\protein-vis\\Protein-Vis\\fastas\\uniprot-proteome_UP000000589_sp_only_mouse.fasta"
-    # psm_dict = {
-    #     "unlabeled": [
-    #         "GRADECALPYLGATCYCDLFCN[115]R",
-    #         "GTNECDIETFVLGVWGR",
-    #         "EQNEASPTPR",
-    #         "GNYGWQAGN[115]HSAFWGMTLDEGIR",
-    #         "CPNGQVDSNDIYQVTPAYR",
-    #         "DLSWQVRSLLLDHNR",
-    #         "CNCALRPLCTWLR",
-    #         "RPGSRNRPGYGTGYF",
-    #         "RPDGDAASQPRTPILLLR",
-    #         "QSLRQELYVQDYASIDWPAQR",
-    #         "GTNGSQIWDTSFAIQALLEAGAHHR",
-    #         "ETLNQGLDFCRRKQR",
-    #         "SYFTDLPKAQTAHEGALN[115]GVTFYAK",
-    #         "CDGEANVFSDLHSLRQFTSR",
-    #         "ETFHGLKELAFSYLVWDSK",
-    #         "IKNIYVSDVLNMK"
-    #     ],
-    #     "group1": [
-    #         "EQNEASPTPR",
-    #         "YCQEQDMCCR",
-    #         "ELAPGLHLR",
-    #         "GVVSDNCYPFSGR",
-    #         "C[143]TCHEGGHWECDQEPCLVDPDMIK"
-    #     ]
-    # }
-    psm_dict = \
-        {"group1": ["C[143]TCHEGGHWECDQEPCLVDPDMIK"]}
+    psm_dict = {
+        "unlabeled": [
+            "GRADECALPYLGATCYCDLFCN[115]R",
+            "GTNECDIETFVLGVWGR",
+            "EQNEASPTPR",
+            "GNYGWQAGN[115]HSAFWGMTLDEGIR",
+            "CPNGQVDSNDIYQVTPAYR",
+            "DLSWQVRSLLLDHNR",
+            "CNCALRPLCTWLR",
+            "RPGSRNRPGYGTGYF",
+            "RPDGDAASQPRTPILLLR",
+            "QSLRQELYVQDYASIDWPAQR",
+            "GTNGSQIWDTSFAIQALLEAGAHHR",
+            "ETLNQGLDFCRRKQR",
+            "SYFTDLPKAQTAHEGALN[115]GVTFYAK",
+            "CDGEANVFSDLHSLRQFTSR",
+            "ETFHGLKELAFSYLVWDSK",
+            "IKNIYVSDVLNMK"
+        ],
+        "group1": [
+            "EQNEASPTPR",
+            "YCQEQDMCCR",
+            "ELAPGLHLR",
+            "GVVSDNCYPFSGR",
+            "C[143]TCHEGGHWECDQEPCLVDPDMIK"
+        ]
+    }
+    # psm_dict = \
+    #     {"group1": ["C[143]TCHEGGHWECDQEPCLVDPDMIK", "GRADECALPYLGATCYCDLFCN[115]R"]}
 
-    ptm_annotations = {"C[143]": [255, 0, 247]}
+    ptm_annotations = {"C[143]": [255, 0, 247], "N[115]": [0, 255, 8]}
     # psm_dict = {
     #     "group1": ['MGWAGDAGCTPRPPIRPRPASERRVIIVLFLGLLLDLLAFTLLLPLLPGLLERHGREQDP',
     #                'LYGSWQRGVDWFASAIGMPAEKRYNSVLFGGLIGSAFSLLQFFSAPLTGAASDYLGRRPV'],
     #     "unlabeled": ['MMLSLTGLAISYAVWATSRSFKAFLASRVIGGISKGNVNLSTAIVADLGSPPTRSQGMAV']
     # }
     # ptm_annotations = {'group1': [255, 0, 0], "C[143]": [0,255,0], "N[115]": [0,255,255], "unlabeled": [0, 0, 0]}
-    pdbs = {'AF-Q9D2V8-F1-model_v1.pdb'}  # currently a set of pdbs, will connect to database later
+    pdbs = {'AF-Q9D2V8-F1-model_v1.pdb', 'AF-Q8BLN5-F1-model_v1.pdb'}  # currently a set of pdbs, will connect to database later
 
     start_time = time.time()
     protein_dict = fasta_reader(fasta_file)
