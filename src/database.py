@@ -41,13 +41,17 @@ class Job(Base):
             species=model.species
         )
 
+
 class JobResult(Base):
+    __tablename__ = 'job_results'
+
     job_number = Column(StringUUID, primary_key=True)
     pq = Column(Text)
     id_ptm_idx_dict = Column(Text)
     regex_dict = Column(Text)
     background_color = Column(Integer)
     structures = ForeignKey('structures.id')
+
 
 class Access(Base):
     __tablename__ = 'access'
