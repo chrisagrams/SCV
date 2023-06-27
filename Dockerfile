@@ -25,8 +25,8 @@ COPY requirements.txt /src
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /src/requirements.txt
 
-# Install Nginx
-RUN apt-get update && apt-get install -y nginx
+# Install Nginx and PyMOL
+RUN apt-get update && apt-get install -y nginx && apt-get install -y pymol
 
 # Create nginx group and user
 RUN groupadd -r nginx && useradd -r -g nginx nginx
