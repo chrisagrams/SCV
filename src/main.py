@@ -9,6 +9,8 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from starlette.staticfiles import StaticFiles
+
 from models import JobModel
 from database import Job, Access, Base
 from processing import worker
@@ -20,6 +22,10 @@ app = FastAPI(
     description="API for the SCV web application.",
     version="0.1.0",
 )  # create FastAPI instance
+
+app.mount("/static", StaticFiles(directory="../static"), name="static") # for development only
+app.mount("/js", StaticFiles(directory="../vendor/js"), name="js") # for development only
+
 
 logger = logging.getLogger("uvicorn")  # create logger
 
@@ -73,6 +79,15 @@ async def submit_job(job: JobModel, request: Request):
     t.start()
 
     return {"job_number": job_number}
+
+
+@app.post("/job_details")
+async def get_job_details(job_number: str = Form(None)):
+    session = Session()
+    job = session.query(Job).filter(Job.job_number == job_number).first()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @app.post("/protein-list")

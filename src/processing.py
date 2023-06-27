@@ -171,6 +171,7 @@ def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, 
                 'protein_id': id_list[i],
                 'sequence': protein_dict[id_list[i]]['sequence'],
                 'UNID': protein_dict[id_list[i]]['gene'],
+                'description': protein_dict[id_list[i]]['des'],
                 'sequence_coverage': zero_line_slice.tolist(),
                 'has_pdb': id_list[i] in pdbs,
                 'ptms': {}  # will be filled later

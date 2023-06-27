@@ -54,6 +54,8 @@ class SequenceCoverageResult(Base):
     protein_id = Column(Text)
     coverage = Column(Double)
     sequence = Column(Text)
+    UNID = Column(Text)
+    description = Column(Text)
     sequence_coverage = Column(JSON)
     ptms = Column(JSON)
     has_pdb = Column(Boolean)
@@ -66,6 +68,8 @@ class SequenceCoverageResult(Base):
             protein_id=model.protein_id,
             coverage=model.coverage,
             sequence=model.sequence,
+            UNID=model.UNID,
+            description=model.description,
             sequence_coverage=model.sequence_coverage,
             ptms=model.ptms,
             has_pdb=model.has_pdb

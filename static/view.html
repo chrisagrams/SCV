@@ -8,7 +8,7 @@
   <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
   <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="styles.css">
 
   <title>SCV</title>
 </head>
@@ -198,7 +198,7 @@
 
       if (this.ptms != undefined) {
         for (const [key, value] of Object.entries(this.ptms)) {
-          let regex_val = regex_dict[key];
+          let regex_val = ptm_annotations[key];
           if (regex_val != undefined) {
             this.ctx.fillStyle = 'rgb(' + regex_val[0] + ',' + regex_val[1] + ',' + regex_val[2] + ')';
 
@@ -226,8 +226,8 @@
           for(const [key, value] of Object.entries(this.ptms)) {
             value.forEach(i => {
               if(i === index) {
-                let mapping = check_regex_dict(this.ptms, i);
-                let regex_val = regex_dict[key];
+                let mapping = check_ptm_annotations(this.ptms, i);
+                let regex_val = ptm_annotations[key];
                 if(mapping.length > 1 && get_ptm_not_group(mapping) !== key) return;
                   res += '<mark style="background-color: ' + 'rgb(' + regex_val[0] + ',' + regex_val[1] + ',' + regex_val[2] + ')' + '">';
                   res += this.sequence.substring(index, index + 1);
@@ -251,7 +251,7 @@
 
   }
 
-  const check_regex_dict = (ptms, val) => {
+  const check_ptm_annotations = (ptms, val) => {
     let res = [];
     for (const [key, values] of Object.entries(ptms)) {
       values.forEach(value => {
@@ -275,7 +275,7 @@
 <script>
   let job = (new URL(document.location)).searchParams.get('job');
   let id_ptm_idx_dict;
-  let regex_dict;
+  let ptm_annotations;
   let background_color;
   let pdb_dest;
   let coverage_cards = [];
@@ -295,50 +295,60 @@
 
   window.onload = () => {
     let form = new FormData();
-    form.append('job', job);
+    form.append('job_number', job);
+
+    // Fetch job details, update legend and background color
+    fetch('/job_details', {
+      method: 'POST',
+      body: form
+    })
+    .then(response => response.json())
+    .then(json => {
+      console.log(json);
+      show_legend(json['ptm_annotations']);
+      background_color = json['background_color'];
+      ptm_annotations = json['ptm_annotations'];
+    });
+
+    // Fetch coverage data
     fetch('/protein-list', {
       method: 'POST',
       body: form
-    }).then(response => response.json())
-    .then(json => {
+    })
+    .then(response => response.json())
+    .then(arr => {
+      console.log(arr);
       document.querySelector("#list_loading").classList.remove("spin-ani");
-      // console.log(json);
-      id_ptm_idx_dict = JSON.parse(json['id_ptm_idx_dict']);
-      regex_dict = JSON.parse(json['regex_dict']);
-      show_legend(regex_dict);
-      background_color = json['background_color'];
-      pdb_dest = json['pdb_dest'];
-      let pq = JSON.parse(json['pq']);
-      if (pq.length == 0) {
-        document.querySelector('#not_done').style.display = "block";
-        document.querySelector('#not_done').innerHTML = "<p>No coverage.</p>";
-      }
-      else {
-        pq.forEach(i => {
-          let c;
-          if (id_ptm_idx_dict != undefined)
-            c = new CoverageCard(i[1][0], i[1][1][1], i[1][1][2], i[0], i[2], i[1][1][0], i[3], id_ptm_idx_dict[i[1][0]]);
-          else
-            c = new CoverageCard(i[1][0], i[1][1][1], i[1][1][2], i[0], i[2], i[1][1][0], i[3], undefined);
-          document.querySelector('.protein-list-container').append(c.createCard());
-          c.drawCoverage(coverage_color);
-          c.annotateCoverage();
-          coverage_cards.push(c);
 
-        });
+      // Sort by coverage
+      arr.sort((a,b) => {
+        return b['coverage'] - a['coverage'];
+      })
 
-        console.log(get_anchor());
-        let selection = document.querySelector("#"+get_anchor());
-        if (selection == null)
-            selection = document.querySelector(".protein-card");
-        selection.click();
+      arr.forEach(i => {
+        console.log(i);
+        let c = new CoverageCard(
+                i['protein_id'],
+                i['UNID'],
+                i['description'],
+                i['coverage'] * 100, // convert to percent
+                i['sequence_coverage'],
+                i['sequence'],
+                i["has_pdb"],
+                i["ptms"]
+        );
+        document.querySelector('.protein-list-container').append(c.createCard());
+        c.drawCoverage(coverage_color);
+        c.annotateCoverage();
+        coverage_cards.push(c);
+      })
 
-      }
-    }).catch(error => {
-      document.querySelector("#list_loading").classList.remove("spin-ani");
-      console.log("not done");
-      console.log(error);
-      document.querySelector('#not_done').style.display = "block";
+      // select first card
+      console.log(get_anchor());
+      let selection = document.querySelector("#"+get_anchor());
+      if (selection == null)
+          selection = document.querySelector(".protein-card");
+      selection.click();
     });
   }
 
@@ -445,12 +455,12 @@
       return div;
   }
 
-  const show_legend = (regex_dict) => {
+  const show_legend = (ptm_annotations) => {
     let legend = document.querySelector("#legend");
 
     legend.append(create_color_circle("Uncovered", 220, 220, 220, 0));
     legend.append(create_color_circle("Coverage", 255, 62,62, 1));
-    for (const [index, [key, value]] of Object.entries(Object.entries(regex_dict))) {
+    for (const [index, [key, value]] of Object.entries(Object.entries(ptm_annotations))) {
       legend.append(create_color_circle(key, value[0], value[1], value[2], parseInt(index)+2));
     }
   }
@@ -706,10 +716,10 @@
   }
 
 </script>
-<script src="js/jquery-1.7.min.js"></script>
-<script src="js/Three45.js"></script>
+<script src="/js/jquery-1.7.min.js"></script>
+<script src="/js/Three45.js"></script>
 <!--<script src="ProteinSurface4.js"></script>-->
-<script type="text/javascript" src="js/GLmol37.js"></script>
+<script type="text/javascript" src="/js/GLmol37.js"></script>
 <script>
   var glmol01 = new GLmol('glmol01', true);
   $('#glmol01_reload').click(function(ev) {

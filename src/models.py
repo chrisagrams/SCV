@@ -86,6 +86,8 @@ class SequenceCoverageModel(BaseModel):
     protein_id: str = None
     coverage: float = None
     sequence: str = None
+    UNID: str = None
+    description: str = None
     sequence_coverage: list = None
     ptms: dict = None
     has_pdb: bool = None
