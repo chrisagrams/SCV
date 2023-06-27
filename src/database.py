@@ -80,6 +80,15 @@ job_seq_result = Table(
 )
 
 
+class FASTA_Entry(Base):
+    __tablename__ = 'fasta_entries'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Text)
+    source_filename = Column(Text)
+    data = Column(JSON)
+
+
 class Access(Base):
     __tablename__ = 'access'
 

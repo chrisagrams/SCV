@@ -6,8 +6,9 @@ import re
 import numpy as np
 import ahocorasick
 
-from database import Job, SequenceCoverageResult
+from database import Job, SequenceCoverageResult, FASTA_Entry
 from models import SequenceCoverageModel
+from helpers import fasta_reader
 
 
 def generate_peptide_psm_dict(psm_dict, regex_dict):
@@ -62,19 +63,6 @@ def automaton_matching(A, seq_line):
         assert seq_line[start_idx:start_idx + len(original_value)] == original_value
     return result
 
-
-def fasta_reader(fasta_path: str):
-    protein_dict = {}
-    with open(fasta_path, 'r') as f_o:
-        file_split = f_o.read().split('\n>')
-
-    for each in file_split:
-        first_line, seq = each.split('\n')[0], ''.join(each.split('\n')[1:])
-        uniprot_id = first_line.split('|')[1]
-        gene = first_line.split('GN=')[1].split(' ')[0] if 'GN=' in first_line else 'N/A'
-        des = ' '.join(first_line.split(' ')[1:]).split(' OS=')[0]
-        protein_dict[uniprot_id] = {'sequence': seq, 'gene': gene, 'des': des}
-    return protein_dict
 
 
 def extract_UNID_and_seq(protein_dict):
@@ -263,7 +251,10 @@ def worker(job_number, session):
     job = session.query(Job).filter(Job.job_number == job_number).first()
 
     # Get protein dictionary
-    protein_dict = fasta_reader("C:\\Users\\Chris\\Downloads\\protein-vis\\Protein-Vis\\fastas\\uniprot-proteome_UP000000589_sp_only_mouse.fasta")  # TODO: add fasta db
+    fasta = session.query(FASTA_Entry).filter(FASTA_Entry.name == job.species).first()
+    if fasta is None:
+        raise ValueError('No fasta entry found for species: {}'.format(job.species))
+    protein_dict = fasta.data
 
     # Identify sequence coverage
     identified = freq_ptm_index_gen_batch(job.psms, job.ptm_annotations, protein_dict, pdbs={}) # TODO: add pdbs
