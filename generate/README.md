@@ -1,7 +1,7 @@
 # Dataset Generation
 
 This directory contains several scripts that are used to generate the required datasets for SCV.
-These scripts will add the datasets directly to the SQLite database located under `../database/` (or wherever specified in the .env file).
+These scripts will add the datasets directly to the SQLite database located under `../db/` (or wherever specified in the .env file).
 These scripts can be executed locally. The resulting SQLite database can be attached as a volume to the Docker container.
 
 ## Table of Contents
