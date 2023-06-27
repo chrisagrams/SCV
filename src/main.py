@@ -3,6 +3,7 @@ import os
 import logging
 import sqlite3
 import uuid
+import threading
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import JobModel
 from database import Job, Access, Base
+from processing import worker
 
 load_dotenv()  # load environmental variables from .env
 
@@ -60,32 +62,25 @@ async def submit_job(job: JobModel, request: Request):
     session.add(new_job)
     session.add(access)
     session.commit()
-    return {"job_number": new_job.job_number}
+
+    job_number = new_job.job_number # get job number
+
+    session.close()
+
+
+    # Start worker thread
+    t = threading.Thread(target=worker, args=(job_number, Session(),))
+    t.start()
+
+    return {"job_number": job_number}
 
 
 @app.post("/protein-list")
-async def get_protein_list(job: str = Form(None)):
-    return {"protein_list": ["P12345", "P67890"]}
-    # db = scvDB.get_connection()
-    # if db is None:
-    #     raise HTTPException(status_code=500, detail="Internal server error")
-    # try:
-    #     cursor = db.cursor()
-    #     cursor.execute("SELECT * FROM results WHERE job_number = ?", (job,))
-    #     row = cursor.fetchone()
-    #     cursor.close()
-    # except sqlite3.Error as e:
-    #     logger.error(e)
-    #     raise HTTPException(status_code=500, detail="Internal server error")
-    # if row:
-    #     result = {
-    #         "job_number": row[0],
-    #         "pq": row[1],
-    #         "id_ptm_idx_dict": row[2],
-    #         "regex_dict": row[3],
-    #         "background_color": row[4],
-    #         "pdb_dest": row[5]
-    #     }
-    #     return result
-    # else:
-    #     return {"error": "No matching job number found."}
+async def get_protein_list(job_number: str = Form(None)):
+    session = Session()
+    job = session.query(Job).filter(Job.job_number == job_number).first()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    seq_results = job.sequence_coverage_results
+
+    return seq_results

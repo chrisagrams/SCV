@@ -1,9 +1,13 @@
 from collections import defaultdict
 import time
+from hashlib import blake2b
 from heapq import heappush, heappop
 import re
 import numpy as np
 import ahocorasick
+
+from database import Job, SequenceCoverageResult
+from models import SequenceCoverageModel
 
 
 def generate_peptide_psm_dict(psm_dict, regex_dict):
@@ -18,7 +22,7 @@ def generate_peptide_psm_dict(psm_dict, regex_dict):
 
         for key in invalid_keys:
             del psm_dict[key]
-        if 'unlabeled' not in psm_dict: # if unlabeled is not in psm_dict, add it
+        if 'unlabeled' not in psm_dict:  # if unlabeled is not in psm_dict, add it
             psm_dict['unlabeled'] = []
         psm_dict['unlabeled'].extend(peptide_psm_dict[key])
 
@@ -69,13 +73,13 @@ def fasta_reader(fasta_path: str):
         uniprot_id = first_line.split('|')[1]
         gene = first_line.split('GN=')[1].split(' ')[0] if 'GN=' in first_line else 'N/A'
         des = ' '.join(first_line.split(' ')[1:]).split(' OS=')[0]
-        protein_dict[uniprot_id] = (seq, gene, des)
+        protein_dict[uniprot_id] = {'sequence': seq, 'gene': gene, 'des': des}
     return protein_dict
 
 
 def extract_UNID_and_seq(protein_dict):
     UNID_list = [key for key in protein_dict.keys()]
-    seq_list = [value[0] for value in protein_dict.values()]
+    seq_list = [value['sequence'] for value in protein_dict.values()]
     return UNID_list, seq_list
 
 
@@ -140,11 +144,33 @@ def calculate_coverage(zero_line_slice):
     return percentage_cov
 
 
+def calc_sequence_coverage_hash(seq_cov_dict):
+    """
+    Calculate the hash of a sequence coverage dictionary
+    :param seq_cov_dict:
+    :return:
+    """
+    # Create new BLAKE2b hash object
+    h = blake2b()
+
+    # Sort keys for consistent hash
+    sorted_keys = sorted(seq_cov_dict.keys())
+
+    # Update hash with sorted keys
+    for key in sorted_keys:
+        value = seq_cov_dict[key]
+        h.update(str(value).encode('utf-8'))
+
+    # Compute hash digest
+    digest = h.hexdigest()
+
+    # Return hash digest
+    return digest
+
+
 def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, pdbs, ptm_index_line_dict,
                                regex_dict):
-    id_freq_array_dict = {}
-    id_ptm_idx_dict = {}
-    h = []
+    identified = {}
 
     start_time = time.time()
 
@@ -152,30 +178,34 @@ def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, 
         zero_line_slice = zero_line[sep_pos_array[i] + 1:sep_pos_array[i + 1]]
         percentage_cov = calculate_coverage(zero_line_slice)
         if percentage_cov != 0.0:  # only add if the coverage is not 0
-            heappush(h, (percentage_cov, (id_list[i], protein_dict[id_list[i]]), zero_line_slice.tolist(),
-                         id_list[i] in pdbs))
-
-            id_freq_array_dict[id_list[i]] = zero_line_slice.tolist()  # add the freq array to the dict
+            identified[id_list[i]] = {
+                'coverage': percentage_cov,
+                'protein_id': id_list[i],
+                'sequence': protein_dict[id_list[i]]['sequence'],
+                'UNID': protein_dict[id_list[i]]['gene'],
+                'sequence_coverage': zero_line_slice.tolist(),
+                'has_pdb': id_list[i] in pdbs,
+                'ptms': {}  # will be filled later
+            }
 
             if regex_dict and ptm_index_line_dict:  # if ptm enabled
                 for ptm in ptm_index_line_dict:  # for each ptm
                     idx_list = \
                         np.array(np.nonzero(ptm_index_line_dict[ptm][sep_pos_array[i] + 1:sep_pos_array[i + 1]]))[
                             0].tolist()
-                    if len(idx_list) > 0:  # only add if there is ptm
-                        if id_list[i] not in id_ptm_idx_dict:
-                            id_ptm_idx_dict[id_list[i]] = {}
-                        id_ptm_idx_dict[id_list[i]].update({ptm: idx_list})
+                    identified[id_list[i]]['ptms'].update({ptm: idx_list})
+
+            # Store the sequence coverage hash
+            hsh = calc_sequence_coverage_hash(identified)
+            identified[id_list[i]]['id'] = hsh
 
     print('Time used for calculating coverage and ptm: ', time.time() - start_time)
 
-    return id_freq_array_dict, id_ptm_idx_dict, [heappop(h) for i in range(len(h))][::-1]
+    return identified
 
 
 def freq_ptm_index_gen_batch(psms, ptm_annotations, protein_dict, pdbs):
-    id_freq_array_dict = {}
-    id_ptm_idx_dict = {}
-    h = []
+
     regex_pat = '\w{1}\[\d+\.?\d+\]'  # universal ptm pattern
 
     psm_dict, peptide_psm_dict = generate_peptide_psm_dict(psms, ptm_annotations)
@@ -196,10 +226,79 @@ def freq_ptm_index_gen_batch(psms, ptm_annotations, protein_dict, pdbs):
     zero_line, ptm_index_line_dict = process_aho_result(aho_result, ptm_index_line_dict, peptide_psm_dict,
                                                         psm_group_dict, zero_line)
 
-    id_freq_array_dict, id_ptm_idx_dict, heap_array = calculate_coverage_and_ptm(
+    identified = calculate_coverage_and_ptm(
         sep_pos_array, id_list, zero_line, protein_dict, pdbs, ptm_index_line_dict, ptm_annotations)
 
-    return id_freq_array_dict, id_ptm_idx_dict, heap_array
+    return identified
+
+
+def gen_sequence_cov_model(cov_dict):
+    """
+    Generate a sequence coverage model from a sequence coverage dictionary
+    :param cov_dict:
+    :return:
+    """
+
+    # Create a new sequence coverage model
+    seq_cov_model = SequenceCoverageModel()
+
+    # Add the sequence coverage dictionary to the model
+    seq_cov_model = seq_cov_model.from_dict(cov_dict)
+
+    # Return the sequence coverage model
+    return seq_cov_model
+
+
+def gen_sequence_cov_models(identified_dict):
+    mdls = []
+    for key in identified_dict:
+        mdl = gen_sequence_cov_model(identified_dict[key])
+        mdls.append(mdl)
+    return mdls
+
+
+def worker(job_number, session):
+
+    # Get the job
+    job = session.query(Job).filter(Job.job_number == job_number).first()
+
+    # Get protein dictionary
+    protein_dict = fasta_reader("C:\\Users\\Chris\\Downloads\\protein-vis\\Protein-Vis\\fastas\\uniprot-proteome_UP000000589_sp_only_mouse.fasta")  # TODO: add fasta db
+
+    # Identify sequence coverage
+    identified = freq_ptm_index_gen_batch(job.psms, job.ptm_annotations, protein_dict, pdbs={}) # TODO: add pdbs
+
+    # Generate sequence coverage models
+    seq_cov_models = gen_sequence_cov_models(identified)
+
+    # Add the sequence coverage models to the database
+    for seq_cov_model in seq_cov_models:
+        # First check if the sequence coverage model already exists
+        seq_cov_res = session.query(SequenceCoverageResult).filter(
+            SequenceCoverageResult.id == seq_cov_model.id).first()
+
+        if seq_cov_res is None:
+            # If the sequence coverage model does not exist, add it to the database
+            seq_cov_res = SequenceCoverageResult.from_model(seq_cov_model)
+            session.add(seq_cov_res)
+
+            # Get all jobs with job_number == job_number
+            jobs = session.query(Job).filter(Job.job_number == job_number).all()
+
+            # Add the job to the sequence coverage model
+            for job in jobs:
+                seq_cov_res.jobs.append(job)
+
+        else:
+            # If the sequence coverage model does exist, add the job to the sequence coverage model
+            seq_cov_res.jobs.append(job)
+
+    # Commit the changes
+    session.commit()
+
+    # Close the session
+    session.close()
+
 
 
 if __name__ == "__main__":
@@ -241,16 +340,16 @@ if __name__ == "__main__":
     #     "unlabeled": ['MMLSLTGLAISYAVWATSRSFKAFLASRVIGGISKGNVNLSTAIVADLGSPPTRSQGMAV']
     # }
     # ptm_annotations = {'group1': [255, 0, 0], "C[143]": [0,255,0], "N[115]": [0,255,255], "unlabeled": [0, 0, 0]}
-    pdbs = {'AF-Q9D2V8-F1-model_v1.pdb', 'AF-Q8BLN5-F1-model_v1.pdb'}  # currently a set of pdbs, will connect to database later
+    pdbs = {'Q9D2V8',
+            'Q8BLN5'}  # currently a set of pdbs, will connect to database later
 
     start_time = time.time()
     protein_dict = fasta_reader(fasta_file)
     print('Time used for reading fasta: ', time.time() - start_time)
 
     start_time = time.time()
-    id_freq_array_dict, id_ptm_idx_dict, heap_array = freq_ptm_index_gen_batch(psm_dict, ptm_annotations, protein_dict,
+    identified = freq_ptm_index_gen_batch(psm_dict, ptm_annotations, protein_dict,
                                                                                pdbs)
     print('Time used for generating freq and ptm index: ', time.time() - start_time)
-    print(id_freq_array_dict)
-    print(id_ptm_idx_dict)
-    print(heap_array)
+    # print(identified)
+    print(gen_sequence_cov_models(identified, job_number='test'))

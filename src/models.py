@@ -79,3 +79,21 @@ class JobModel(BaseModel):
         if v not in ['human', 'mouse', 'rat'] and len(v) != 0:
             raise ValueError('Species must be human, mouse, or rat.')
         return v
+
+
+class SequenceCoverageModel(BaseModel):
+    id: str = None
+    protein_id: str = None
+    coverage: float = None
+    sequence: str = None
+    sequence_coverage: list = None
+    ptms: dict = None
+    has_pdb: bool = None
+
+    @classmethod
+    def from_dict(cls, d):
+        try:
+            return cls(**d)
+        except ValidationError as e:
+            raise ValueError(e)
+

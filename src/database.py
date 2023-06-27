@@ -1,9 +1,11 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, TypeDecorator, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, TypeDecorator, ForeignKey, Double, Boolean, Table, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 import json
 import uuid
 from datetime import datetime
+
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -23,34 +25,59 @@ class StringUUID(TypeDecorator):
 
 
 class Job(Base):
-    __tablename__ = 'requests'
+    __tablename__ = 'jobs'
 
     job_number = Column(StringUUID, primary_key=True, default=uuid.uuid4)
-    psms = Column(Text)
-    ptm_annotations = Column(Text)
+    psms = Column(JSON)
+    ptm_annotations = Column(JSON)
     background_color = Column(Integer)
     species = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    sequence_coverage_results = relationship('SequenceCoverageResult', secondary='job_seq_result',
+                                             back_populates='jobs')
 
     @classmethod
     def from_model(cls, model):
         return cls(
-            psms=json.dumps(model.psms),
-            ptm_annotations=json.dumps(model.ptm_annotations),
+            job_number=uuid.uuid4(),
+            psms=model.psms,
+            ptm_annotations=model.ptm_annotations,
             background_color=model.background_color,
             species=model.species
         )
 
 
-class JobResult(Base):
-    __tablename__ = 'job_results'
+class SequenceCoverageResult(Base):
+    __tablename__ = 'sequence_coverage_results'
 
-    job_number = Column(StringUUID, primary_key=True)
-    pq = Column(Text)
-    id_ptm_idx_dict = Column(Text)
-    regex_dict = Column(Text)
-    background_color = Column(Integer)
-    structures = ForeignKey('structures.id')
+    id = Column(String, primary_key=True)
+    protein_id = Column(Text)
+    coverage = Column(Double)
+    sequence = Column(Text)
+    sequence_coverage = Column(JSON)
+    ptms = Column(JSON)
+    has_pdb = Column(Boolean)
+    jobs = relationship('Job', secondary='job_seq_result', back_populates='sequence_coverage_results')
+
+    @classmethod
+    def from_model(cls, model):
+        return cls(
+            id=model.id,
+            protein_id=model.protein_id,
+            coverage=model.coverage,
+            sequence=model.sequence,
+            sequence_coverage=model.sequence_coverage,
+            ptms=model.ptms,
+            has_pdb=model.has_pdb
+        )
+
+# Job Result and Sequence Coverage Result junction table
+job_seq_result = Table(
+    'job_seq_result',
+    Base.metadata,
+    Column('job_number', StringUUID, ForeignKey('jobs.job_number')),
+    Column('id', String, ForeignKey('sequence_coverage_results.id'))
+)
 
 
 class Access(Base):
