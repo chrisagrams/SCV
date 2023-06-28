@@ -14,15 +14,22 @@ from helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to
 
 def setup_pymol_from_file(pdb_file, pdb_name):
     # Load the PDB file
-    pymol.pymol_argv = ['pymol', '-qc']  # pymol launching: quiet (-q), without GUI (-c)
-    pymol.finish_launching()
-    pymol.cmd.load(pdb_file, pdb_name)
-    pymol.cmd.disable("all")
-    pymol.cmd.enable()
-    pymol.cmd.hide('all')
-    pymol.cmd.show('cartoon')
-    pymol.cmd.set('ray_opaque_background', 0)
-    pymol.cmd.bg_color('black')
+    try:
+        pymol.pymol_argv = ['pymol', '-qc']  # pymol launching: quiet (-q), without GUI (-c)
+        pymol.finish_launching()
+        pymol.cmd.load(pdb_file, pdb_name)
+        pymol.cmd.disable("all")
+        pymol.cmd.enable()
+        pymol.cmd.hide('all')
+        pymol.cmd.show('cartoon')
+        pymol.cmd.set('ray_opaque_background', 0)
+        pymol.cmd.bg_color('black')
+        pymol.cmd.set('pse_export_version', 1.74) # set the version of the PyMOL session file to 1.74 (needed for pymol 2.0)
+        pymol.cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
+        session = pymol.cmd.get_session(pdb_name, partial=0) # get PDB session
+    except pymol.CmdException as e:
+        print(f'A pymol error occurred: {e}')
+    return session
 
 
 def get_pdb_str_from_file(pdb_file):
@@ -31,17 +38,24 @@ def get_pdb_str_from_file(pdb_file):
     return pdb_str
 
 
-def setup_pymol_from_string(pdb_str, pdb_name):
+def setup_pymol_from_string(pdb_str, pdb_name) -> dict:
     # Load the PDB file from string
-    pymol.pymol_argv = ['pymol', '-qc']  # pymol launching: quiet (-q), without GUI (-c)
-    pymol.finish_launching()
-    pymol.cmd.read_pdbstr(pdb_str, pdb_name)
-    pymol.cmd.disable("all")
-    pymol.cmd.enable()
-    pymol.cmd.hide('all')
-    pymol.cmd.show('cartoon')
-    pymol.cmd.set('ray_opaque_background', 0)
-    pymol.cmd.bg_color('black')
+    try:
+        pymol.pymol_argv = ['pymol', '-qc']  # pymol launching: quiet (-q), without GUI (-c)
+        pymol.finish_launching()
+        pymol.cmd.read_pdbstr(pdb_str, pdb_name)
+        pymol.cmd.disable("all")
+        pymol.cmd.enable()
+        pymol.cmd.hide('all')
+        pymol.cmd.show('cartoon')
+        pymol.cmd.set('ray_opaque_background', 0)
+        pymol.cmd.bg_color('black')
+        pymol.cmd.set('pse_export_version', 1.74) # set the version of the PyMOL session file to 1.74 (needed for pymol 2.0)
+        pymol.cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
+        session = pymol.cmd.get_session(pdb_name, partial=0) # get PDB session
+    except pymol.CmdException as e:
+        print(f'A pymol error occurred: {e}')
+    return session
 
 
 def color_getter(sequence_coverage: list,
@@ -90,30 +104,26 @@ def color_getter(sequence_coverage: list,
     return default + '\n' + covered + '\n' + ptm_color.rstrip('\n')
 
 
-def get_objs(pdb_name: str) -> str:
-    try:
-        pymol.cmd.set('pse_export_version', 1.74)
-        pymol.cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
-    except pymol.CmdException as e:
-        print(f'A pymol error occurred: {e}')
+def get_objs(session: dict, pdb_name: str) -> dict:
+    # get objects from PDB session
+    obj = session['names'][0]
 
-    names = pymol.cmd.get_session()['names']
+    if obj is None: # PDB not loaded
+        raise Exception('No objects found.')
+    if obj[2] == 0:  # not visible
+        raise Exception('Object not visible.')
+    if obj[1] == 0 and obj[4] == 1 and obj[0] == pdb_name:
+        return pymol_obj_extract(obj)
 
-    for obj in names:
-        if obj is None:
-            continue
-        if obj[2] == 0:  # not visible
-            continue
-        if obj[1] == 0 and obj[4] == 1 and obj[0] == pdb_name:
-            return pymol_obj_extract(obj)
-
-    raise Exception('No objects found')
+    raise Exception('Unknown error')
 
 
 def get_view() -> dict:
-    pymol.cmd.turn('z', 180)
+    # pymol.cmd.turn('z', 180)
     view = pymol.cmd.get_view()
-    pymol.cmd.turn('z', 180)
+    # pymol.cmd.turn('z', 180)
+
+    # view = session['view']
 
     ret = {
         'rotation_matrix': {
@@ -151,10 +161,10 @@ def show_cov_3D(pdb_file: str,
     """
     Generate GLmol string for 3D visualization of protein coverage
     """
-    setup_pymol_from_file(pdb_file, pdb_name)  # setup pymol + load pdb
+    pymol_session = setup_pymol_from_file(pdb_file, pdb_name)  # setup pymol + load pdb
     pdb_str = pymol.cmd.get_pdbstr(pdb_name)  # get pdb string
 
-    objs = get_objs(pdb_name)
+    objs = get_objs(pymol_session, pdb_name)
 
     view = get_view()
 
