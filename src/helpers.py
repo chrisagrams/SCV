@@ -83,6 +83,9 @@ def compact_list(seq: list) -> str:
 
     return ','.join(ret)
 
+def compact_range_list(seq: list) -> str:
+    return ','.join([f'{start}-{end}' for start, end in seq])
+
 
 def pymol_obj_dict_to_str(obj: dict) -> str:
     ret = []
@@ -117,3 +120,13 @@ def pymol_view_dict_to_str(view: dict) -> str:
     view_str = ','.join([f"{round(val, 3)}" for val in view_values]) # round to 3 decimal places
     return f"\nview:{view_str}\n"
 
+
+def color_values_to_str(colors: list):
+    return ",".join([str(round(color/256, 3)) for color in colors])
+
+
+def color_dict_to_str(color: dict) -> str:
+    ret = ''
+    for k, v in color.items():
+        ret += f"color:{color_values_to_str(v['color'])}:{compact_range_list(v['indices'])}\n"
+    return ret

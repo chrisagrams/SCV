@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.database import Base, Job, SequenceCoverageResult
-from helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to_str
+from helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to_str, color_dict_to_str
 
 
 def setup_pymol_from_file(pdb_file, pdb_name):
@@ -91,18 +91,31 @@ def color_getter(sequence_coverage: list,
     covered += ','.join([str(amino_ele_pos_dict[each[0] + 1][0]) + '-' + str(amino_ele_pos_dict[each[-1] + 1][-1])
                          for each in cov_pos_block])
 
-    # ptm color string concatenate
-    ptm_color = ''
-    if ptms:
-        for ptm in ptms:
-            ptm_color += 'color:' + ','.join(
-                ['%.3f' % (int(each) / 256) for each in ptm_annotations[ptm]]) + ':'
-            ptm_color += ','.join([str(amino_ele_pos_dict[idx + 1][0]) + '-'
-                                   + str(amino_ele_pos_dict[idx + 1][-1])
-                                   for idx in ptms[ptm]])
-            ptm_color += '\n'
-    return default + '\n' + covered + '\n' + ptm_color.rstrip('\n')
+    non_cov = [(amino_ele_pos_dict[each[0] + 1][0], amino_ele_pos_dict[each[-1] + 1][-1]) for each in non_cov_pos_block]
+    cov = [(amino_ele_pos_dict[each[0] + 1][0], amino_ele_pos_dict[each[-1] + 1][-1]) for each in cov_pos_block]
 
+    # # ptm color string concatenate
+    # ptm_color = ''
+    # if ptms:
+    #     for ptm in ptms:
+    #         ptm_color += 'color:' + ','.join(
+    #             ['%.3f' % (int(each) / 256) for each in ptm_annotations[ptm]]) + ':'
+    #         ptm_color += ','.join([str(amino_ele_pos_dict[idx + 1][0]) + '-'
+    #                                + str(amino_ele_pos_dict[idx + 1][-1])
+    #                                for idx in ptms[ptm]])
+    #         ptm_color += '\n'
+
+    if ptms:
+        ptm_color_dict = {}
+        for ptm in ptms:
+            # color = [int(each) / 256 for each in ptm_annotations[ptm]]  # List of color values
+            ptm_color_dict[ptm] = {}
+            ptm_color_dict[ptm]['color'] = ptm_annotations[ptm]
+
+            ptm_color_dict[ptm]['indices']= [(amino_ele_pos_dict[idx + 1][0], amino_ele_pos_dict[idx + 1][-1]) for idx in
+                       ptms[ptm]]  # List of indices
+
+    return default + '\n' + covered + '\n' + color_dict_to_str(ptm_color_dict)
 
 def get_objs(session: dict, pdb_name: str) -> dict:
     # get objects from PDB session
