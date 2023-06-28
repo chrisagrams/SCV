@@ -9,8 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.database import Base, Job, SequenceCoverageResult
-from vendor.python.pymol2glmol import *
-from helpers import pymol_obj_extract, pymol_obj_dict_to_str
+from helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to_str
 
 
 def setup_pymol_from_file(pdb_file, pdb_name):
@@ -93,12 +92,12 @@ def color_getter(sequence_coverage: list,
 
 def get_objs(pdb_name: str) -> str:
     try:
-        cmd.set('pse_export_version', 1.74)
-        cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
+        pymol.cmd.set('pse_export_version', 1.74)
+        pymol.cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
     except pymol.CmdException as e:
         print(f'A pymol error occurred: {e}')
 
-    names = cmd.get_session()['names']
+    names = pymol.cmd.get_session()['names']
 
     for obj in names:
         if obj is None:
@@ -111,26 +110,35 @@ def get_objs(pdb_name: str) -> str:
     raise Exception('No objects found')
 
 
-def get_view() -> str:
-    ret = ''
-    cmd.turn('z', 180)
-    view = cmd.get_view()
-    cmd.turn('z', 180)
-    cx = -view[12]
-    cy = -view[13]
-    cz = -view[14]
-    cameraZ = - view[11] - 150
-    fov = float(cmd.get("field_of_view"))
-    fogStart = float(cmd.get("fog_start"))
-    slabNear = view[15] + view[11]
-    slabFar = view[16] + view[11]
-    ret += "\nview:%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f" % \
-           (cx, cy, cz, cameraZ, slabNear, slabFar, fogStart, fov)
-    for i in range(9):
-        ret += ",%.3f" % view[i]
+def get_view() -> dict:
+    pymol.cmd.turn('z', 180)
+    view = pymol.cmd.get_view()
+    pymol.cmd.turn('z', 180)
 
-    ret += '\n'
-
+    ret = {
+        'rotation_matrix': {
+            # | n11 n12 n13 |
+            # | n21 n22 n23 |
+            # | n31 n32 n33 |
+            'n11': view[0],
+            'n21': view[1],
+            'n31': view[2],
+            'n12': view[3],
+            'n22': view[4],
+            'n32': view[5],
+            'n13': view[6],
+            'n23': view[7],
+            'n33': view[8],
+        },
+        'cx': -view[12],  # cx
+        'cy': -view[13],  # cy
+        'cz': -view[14],  # cz
+        'camera_z': -view[11] - 150,  # camera_z
+        'slab_near': view[15] + view[11],  # slab_near
+        'slab_far': view[16] + view[11],  # slab_far
+        'fog_start': float(pymol.cmd.get("fog_start")),  # fog_start
+        'fov': float(pymol.cmd.get("field_of_view")),  # fov
+    }
     return ret
 
 
@@ -144,12 +152,15 @@ def show_cov_3D(pdb_file: str,
     Generate GLmol string for 3D visualization of protein coverage
     """
     setup_pymol_from_file(pdb_file, pdb_name)  # setup pymol + load pdb
-    pdb_str = cmd.get_pdbstr(pdb_name)  # get pdb string
+    pdb_str = pymol.cmd.get_pdbstr(pdb_name)  # get pdb string
 
     objs = get_objs(pdb_name)
+
+    view = get_view()
+
     ret = pymol_obj_dict_to_str(objs) \
           + color_getter(sequence_coverage, ptms, ptm_annotations, pdb_str) \
-          + get_view() \
+          + pymol_view_dict_to_str(view) \
           + f"bgcolor:{background_color}"
 
     return ret

@@ -90,5 +90,30 @@ def pymol_obj_dict_to_str(obj: dict) -> str:
         if k == 'name':
             continue
         ret.append(f"{k}: {compact_list(v)}")
-    return '\n'.join(ret)
+    return '\n'.join(ret) + '\n'
+
+def pymol_view_dict_to_str(view: dict) -> str:
+    matrix = view['rotation_matrix']
+    view_values = [
+        view['cx'],
+        view['cy'],
+        view['cz'],
+        view['camera_z'],
+        view['slab_near'],
+        view['slab_far'],
+        view['fog_start'],
+        view['fov'],
+        matrix['n11'],
+        matrix['n21'],
+        matrix['n31'],
+        matrix['n12'],
+        matrix['n22'],
+        matrix['n32'],
+        matrix['n13'],
+        matrix['n23'],
+        matrix['n33']
+    ]
+
+    view_str = ','.join([f"{round(val, 3)}" for val in view_values]) # round to 3 decimal places
+    return f"\nview:{view_str}\n"
 
