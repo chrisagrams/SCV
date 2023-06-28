@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import Base, Job, SequenceCoverageResult
 from vendor.python.pymol2glmol import *
+from helpers import pymol_obj_extract, pymol_obj_dict_to_str
 
 
 def setup_pymol_from_file(pdb_file, pdb_name):
@@ -93,12 +94,11 @@ def color_getter(sequence_coverage: list,
 def get_objs(pdb_name: str) -> str:
     try:
         cmd.set('pse_export_version', 1.74)
+        cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
     except pymol.CmdException as e:
         print(f'A pymol error occurred: {e}')
-    names = cmd.get_session()['names']
-    cmd.set('pdb_retain_ids', 1)
 
-    ret = ''
+    names = cmd.get_session()['names']
 
     for obj in names:
         if obj is None:
@@ -106,13 +106,9 @@ def get_objs(pdb_name: str) -> str:
         if obj[2] == 0:  # not visible
             continue
         if obj[1] == 0 and obj[4] == 1 and obj[0] == pdb_name:
-            ret += parseObjMol(obj)
-        if obj[1] == 0 and obj[4] == 4:  # currently all dist objects are exported
-            ret += parseDistObj(obj)
+            return pymol_obj_extract(obj)
 
-    ret += '\n'
-
-    return ret
+    raise Exception('No objects found')
 
 
 def get_view() -> str:
@@ -150,7 +146,8 @@ def show_cov_3D(pdb_file: str,
     setup_pymol_from_file(pdb_file, pdb_name)  # setup pymol + load pdb
     pdb_str = cmd.get_pdbstr(pdb_name)  # get pdb string
 
-    ret = get_objs(pdb_name) \
+    objs = get_objs(pdb_name)
+    ret = pymol_obj_dict_to_str(objs) \
           + color_getter(sequence_coverage, ptms, ptm_annotations, pdb_str) \
           + get_view() \
           + f"bgcolor:{background_color}"
@@ -176,6 +173,8 @@ if __name__ == "__main__":
     seq_result = session.query(SequenceCoverageResult).filter(SequenceCoverageResult.protein_id == "Q99JR5").first()
 
     print(time.time() - db_start)
+
+    # get_objs(pdb_name)
 
     start = time.time()
     ret = show_cov_3D(pdb_file,
