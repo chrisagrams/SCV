@@ -23,9 +23,9 @@ app = FastAPI(
     version="0.1.0",
 )  # create FastAPI instance
 
-app.mount("/static", StaticFiles(directory="../static"), name="static") # for development only
-app.mount("/js", StaticFiles(directory="../vendor/js"), name="js") # for development only
-
+if os.getenv('ENVIRONMENT') == 'development':
+    app.mount("/static", StaticFiles(directory="../static"), name="static")  # for development only
+    app.mount("/js", StaticFiles(directory="../vendor/js"), name="js")  # for development only
 
 logger = logging.getLogger("uvicorn")  # create logger
 
@@ -69,10 +69,9 @@ async def submit_job(job: JobModel, request: Request):
     session.add(access)
     session.commit()
 
-    job_number = new_job.job_number # get job number
+    job_number = new_job.job_number  # get job number
 
     session.close()
-
 
     # Start worker thread
     t = threading.Thread(target=worker, args=(job_number, Session(),))

@@ -12,11 +12,25 @@ A web application for protein sequence coverage 3D visualization.
 ## Table of Contents
 
 - [Description](#description)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
 
+## Dependencies
+Make sure you have the following dependencies installed before running the project:
+
+- [Docker](https://www.docker.com/) - Containerization platform used to build and run the application.
+
+If you wish to run the project locally without Docker or Nginx, you will also need to install the following dependencies:
+- [Python >= 3.8](https://www.python.org/) - Programming language used to build the backend API.
+- [pip](https://pip.pypa.io/en/stable/) - Package installer for Python.
+- [PyMOL](https://pymol.org/2/) - Molecular visualization system used to generate the 3D protein structure images.
+  - Debian/Ubuntu: `sudo apt-get install pymol`
+  - Arch/Manjaro: `sudo pacman -S pymol`
+  - macOS: `brew install pymol`
+  - Windows: *See [Open-Source PyMOL - PyMOL Wiki](https://pymolwiki.org/index.php/Windows_Install#Open-Source_PyMOL)*
 
 ## Installation
 To run this project locally using Docker, follow the steps below:
