@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Configure logging
-logging.basicConfig(format='%(message)s', level=logging.INFO)
+logging.basicConfig(filename="process_pdb_log.txt", format='%(message)s', level=logging.INFO)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.database import Base, ProteinStructure
@@ -62,6 +62,7 @@ def main():
             for message in pool.imap_unordered(process_pdb_file, pdb_files):
                 logging.info(message)
                 pbar.update()  # manually update the progress bar
+
 
 if __name__ == "__main__":
     main()
