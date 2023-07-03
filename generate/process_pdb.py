@@ -2,11 +2,14 @@ import multiprocessing
 import os
 import sys
 import argparse
+import logging
 from dotenv import load_dotenv
 from tqdm import tqdm
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Configure logging
+logging.basicConfig(format='%(message)s', level=logging.INFO)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.database import Base, ProteinStructure
@@ -55,10 +58,10 @@ def main():
 
     # Use a multiprocessing Pool
     with multiprocessing.Pool() as pool:
-        for message in tqdm(pool.imap_unordered(process_pdb_file, pdb_files), total=len(pdb_files),
-                            desc="Processing files", unit="file"):
-            print(message)
-
+        with tqdm(total=len(pdb_files), desc="Processing files", unit="file") as pbar:
+            for message in pool.imap_unordered(process_pdb_file, pdb_files):
+                logging.info(message)
+                pbar.update()  # manually update the progress bar
 
 if __name__ == "__main__":
     main()

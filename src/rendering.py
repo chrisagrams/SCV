@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pymol  # must be installed on system (see README.md)
 import re
@@ -20,6 +22,10 @@ default_non_covered = [221, 221, 221]
 def setup_pymol_from_file(pdb_file, pdb_name):
     # Load the PDB file
     try:
+        original_stdout = sys.stdout
+        null_device = open(os.devnull, 'w')
+        sys.stdout = null_device
+
         pymol.pymol_argv = ['pymol', '-qc']  # pymol launching: quiet (-q), without GUI (-c)
         pymol.finish_launching()
         pymol.cmd.load(pdb_file, pdb_name)
@@ -33,6 +39,9 @@ def setup_pymol_from_file(pdb_file, pdb_name):
                       1.74)  # set the version of the PyMOL session file to 1.74 (needed for pymol 2.0)
         pymol.cmd.set('pdb_retain_ids', 1)  # keep the original residue ids, not sure if this is necessary
         session = pymol.cmd.get_session(pdb_name, partial=0)  # get PDB session
+
+        sys.stdout = original_stdout
+        null_device.close()
     except pymol.CmdException as e:
         print(f'A pymol error occurred: {e}')
     return session
