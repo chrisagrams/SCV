@@ -84,6 +84,30 @@ job_seq_result = Table(
 )
 
 
+class ProteinStructure(Base):
+    __tablename__ = 'protein_structures'
+
+    id = Column(String, primary_key=True)
+    protein_id = Column(Text)
+    species = Column(Text)
+    pdb_id = Column(Text)
+    objs = Column(JSON)
+    view = Column(JSON)
+    amino_ele_pos = Column(JSON)
+
+    @classmethod
+    def from_model(cls, model):
+        return cls(
+            id=model.id,
+            protein_id=model.protein_id,
+            species=model.species,
+            pdb_id=model.pdb_id,
+            objs=model.objs,
+            view=model.view,
+            amino_ele_pos=model.amino_ele_pos
+        )
+
+
 class FASTA_Entry(Base):
     __tablename__ = 'fasta_entries'
 

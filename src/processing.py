@@ -1,14 +1,12 @@
 from collections import defaultdict
 import time
-from hashlib import blake2b
-from heapq import heappush, heappop
 import re
 import numpy as np
 import ahocorasick
 
 from database import Job, SequenceCoverageResult, FASTA_Entry
 from models import SequenceCoverageModel
-from helpers import fasta_reader
+from helpers import fasta_reader, calc_hash_of_dict
 
 
 def generate_peptide_psm_dict(psm_dict, regex_dict):
@@ -132,30 +130,6 @@ def calculate_coverage(zero_line_slice):
     return percentage_cov
 
 
-def calc_sequence_coverage_hash(seq_cov_dict):
-    """
-    Calculate the hash of a sequence coverage dictionary
-    :param seq_cov_dict:
-    :return:
-    """
-    # Create new BLAKE2b hash object
-    h = blake2b()
-
-    # Sort keys for consistent hash
-    sorted_keys = sorted(seq_cov_dict.keys())
-
-    # Update hash with sorted keys
-    for key in sorted_keys:
-        value = seq_cov_dict[key]
-        h.update(str(value).encode('utf-8'))
-
-    # Compute hash digest
-    digest = h.hexdigest()
-
-    # Return hash digest
-    return digest
-
-
 def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, pdbs, ptm_index_line_dict,
                                regex_dict):
     identified = {}
@@ -185,7 +159,7 @@ def calculate_coverage_and_ptm(sep_pos_array, id_list, zero_line, protein_dict, 
                     identified[id_list[i]]['ptms'].update({ptm: idx_list})
 
             # Store the sequence coverage hash
-            hsh = calc_sequence_coverage_hash(identified)
+            hsh = calc_hash_of_dict(identified)
             identified[id_list[i]]['id'] = hsh
 
     print('Time used for calculating coverage and ptm: ', time.time() - start_time)

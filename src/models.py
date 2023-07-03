@@ -99,3 +99,19 @@ class SequenceCoverageModel(BaseModel):
         except ValidationError as e:
             raise ValueError(e)
 
+
+class ProteinStructureModel(BaseModel):
+    id: str = None
+    protein_id: str = None
+    species: str = None
+    pdb_id: str = None
+    objs: dict = None
+    view: dict = None
+    amino_ele_pos: dict = None
+
+    @classmethod
+    def from_dict(cls, d):
+        try:
+            return cls(**d)
+        except ValidationError as e:
+            raise ValueError(e)

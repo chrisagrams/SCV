@@ -1,3 +1,5 @@
+from hashlib import blake2b
+
 import pymol
 def fasta_reader(fasta_path: str):
     protein_dict = {}
@@ -130,3 +132,28 @@ def color_dict_to_str(color: dict) -> str:
     for k, v in color.items():
         ret += f"color:{color_values_to_str(v['color'])}:{compact_range_list(v['indices'])}\n"
     return ret
+
+
+
+def calc_hash_of_dict(target_dict):
+    """
+    Calculate the hash of a dictionary using its values
+    :param seq_cov_dict:
+    :return:
+    """
+    # Create new BLAKE2b hash object
+    h = blake2b()
+
+    # Sort keys for consistent hash
+    sorted_keys = sorted(target_dict.keys())
+
+    # Update hash with sorted keys
+    for key in sorted_keys:
+        value = target_dict[key]
+        h.update(str(value).encode('utf-8'))
+
+    # Compute hash digest
+    digest = h.hexdigest()
+
+    # Return hash digest
+    return digest
