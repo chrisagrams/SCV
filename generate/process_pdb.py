@@ -1,10 +1,14 @@
 import multiprocessing
 import os
+import sys
 import argparse
 from dotenv import load_dotenv
 from tqdm import tqdm
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.database import Base, ProteinStructure
 from src.rendering import get_db_model_from_pdb
 
@@ -16,6 +20,10 @@ parser.add_argument('-s', '--species', help="Desired species.", required=True)
 parser.add_argument('--database', help="Database to add to.", default=os.getenv('DATABASE_URL'), required=False)
 
 args = parser.parse_args()
+
+engine = create_engine(os.getenv('DATABASE_URL'))
+
+Base.metadata.create_all(engine)  # create database tables
 
 
 def process_pdb_file(pdb_file):
