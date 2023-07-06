@@ -3,6 +3,9 @@ import os
 import sys
 import argparse
 import logging
+import time
+
+import sqlalchemy
 from dotenv import load_dotenv
 from tqdm import tqdm
 from sqlalchemy import create_engine
@@ -29,25 +32,33 @@ engine = create_engine(os.getenv('DATABASE_URL'))
 Base.metadata.create_all(engine)  # create database tables
 
 
-def process_pdb_file(pdb_file):
+def process_pdb_file(pdb_file, max_retries=5, wait_time=5):
     # Create a new session for this process
     engine = create_engine(os.getenv('DATABASE_URL'))
     Session = sessionmaker(bind=engine)
-    session = Session()
 
-    mdl = get_db_model_from_pdb(pdb_file, os.path.basename(pdb_file), os.path.basename(pdb_file).split('-')[1], args.species)
+    for attempt in range(max_retries):
+        try:
+            session = Session()
 
-    # Check if entry already exists
-    existing_entry = session.query(ProteinStructure).filter_by(id=mdl.id).first()
-    if existing_entry:
-        session.close()
-        return f"Entry with id \"{mdl.id}\" already exists in database."
-    else:
-        session.merge(mdl) # merge the object into the session
-        session.commit()
-        session.close()
-        return f"Added {pdb_file} to database as \"{mdl.id}.\""
+            mdl = get_db_model_from_pdb(pdb_file, os.path.basename(pdb_file), os.path.basename(pdb_file).split('-')[1], args.species)
 
+            # Check if entry already exists
+            existing_entry = session.query(ProteinStructure).filter_by(id=mdl.id).first()
+            if existing_entry:
+                session.close()
+                return f"Entry with id \"{mdl.id}\" already exists in database."
+            else:
+                session.merge(mdl)  # merge the object into the session
+                session.commit()
+                session.close()
+                return f"Added {pdb_file} to database as \"{mdl.id}.\""
+        except sqlalchemy.exc.OperationalError as e:
+            if "database is locked" in str(e) and attempt < max_retries - 1:  # check if it's a locked error and if we haven't exceeded max_retries
+                time.sleep(wait_time)  # wait before retrying
+                continue
+            else:
+                raise  # if it's a different OperationalError, or we've exceeded max_retries, raise the exception
 
 def main():
     # Get all PDB files in directory

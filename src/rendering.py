@@ -76,7 +76,7 @@ def setup_pymol_from_string(pdb_str, pdb_name) -> dict:
 
 def clean_pymol():
     pymol.cmd.delete('all')
-    pymol.cmd.quit()
+    # pymol.cmd.quit()
 
 
 def get_amino_ele_pos_dict(pdb_str) -> dict:
