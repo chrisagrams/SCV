@@ -7,13 +7,14 @@ import threading
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 from starlette.staticfiles import StaticFiles
 
 from models import JobModel
-from database import Job, Access, Base
+from database import Job, Access, Base, ProteinStructure
 from processing import worker
+from rendering import get_annotations
 
 load_dotenv()  # load environmental variables from .env
 
@@ -98,3 +99,28 @@ async def get_protein_list(job_number: str = Form(None)):
     seq_results = job.sequence_coverage_results
 
     return seq_results
+
+
+@app.post("/protein-structure")
+async def get_protein_structure(job_number: str = Form(None), protein_id: str = Form(None)):
+    session = Session()
+    job = session.query(Job).filter(Job.job_number == job_number).first()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    seq_results = job.sequence_coverage_results
+
+    for seq_result in seq_results:
+        if seq_result.protein_id == protein_id:
+            structure = session.query(ProteinStructure).filter(and_(ProteinStructure.protein_id == protein_id,
+                                                                    ProteinStructure.species == job.species)).first()
+            if structure is None:
+                raise HTTPException(status_code=404, detail="Protein structure not found")
+
+            annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations, structure.amino_ele_pos)
+            return {
+                "view": structure.view,
+                "objs": structure.objs,
+                "annotations": annotations
+            }
+
+    raise HTTPException(status_code=404, detail="Protein structure not found")
