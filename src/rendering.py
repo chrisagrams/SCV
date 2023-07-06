@@ -74,6 +74,11 @@ def setup_pymol_from_string(pdb_str, pdb_name) -> dict:
     return session
 
 
+def clean_pymol():
+    pymol.cmd.delete('all')
+    pymol.cmd.quit()
+
+
 def get_amino_ele_pos_dict(pdb_str) -> dict:
     # from pdb_str get element pos to amino acid pos
     pdb_str = pdb_str.split('\nTER')[0].split('\n')
@@ -201,6 +206,8 @@ def render_3d_from_pdb(pdb_file: str,
 
     # annotations = get_annotations(sequence_coverage, ptms, ptm_annotations, amino_ele_pos)
 
+    clean_pymol() # clean up pymol session
+
     return {
         'objs': objs,
         'view': view,
@@ -263,3 +270,4 @@ if __name__ == "__main__":
     print(ret)
 
     print(time.time() - start)
+
