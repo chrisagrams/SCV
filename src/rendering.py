@@ -104,6 +104,9 @@ def get_annotations(sequence_coverage: list,
     cov_pos_block = np.split(non_zero_index, np.where(np.diff(non_zero_index) != 1)[0] + 1)
     non_cov_pos_block = np.split(zero_index, np.where(np.diff(zero_index) != 1)[0] + 1)
 
+    # convert keys of amino_ele_pos_dict to int
+    amino_ele_pos_dict = {int(key): value for key, value in amino_ele_pos_dict.items()}
+
     # add zeros to amino_ele_pos_dict for amino acids not in pdb_str
     for kpos in range(len(sequence_coverage)):
         if kpos + 1 not in amino_ele_pos_dict:
@@ -227,7 +230,7 @@ def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStr
 
 
 if __name__ == "__main__":
-    pdb_file = "C:\\Users\\cgrams\\protein-vis\\Protein-Vis\\pdbs\\UP000000589_10090_MOUSE\\AF-Q99JR5-F1-model_v1.pdb"
+    pdb_file = "C:\\Users\\Chris\\Downloads\\protein-vis\\Protein-Vis\\pdbs\\UP000000589_10090_MOUSE\\AF-Q99JR5-F1-model_v1.pdb"
     pdb_name = "AF-Q99JR5-F1-model_v1.pdb"
 
     db_start = time.time()
@@ -239,9 +242,10 @@ if __name__ == "__main__":
 
     session = Session()
 
-    job = session.query(Job).filter(Job.job_number == '03028b4d-f9d4-4a20-893c-fb344d6441e6').first()
+    job = session.query(Job).filter(Job.job_number == '0be41ee9-f644-43ab-9a9a-6997a7bc241d').first()
 
     seq_result = session.query(SequenceCoverageResult).filter(SequenceCoverageResult.protein_id == "Q99JR5").first()
+
 
     print(time.time() - db_start)
 
@@ -251,6 +255,8 @@ if __name__ == "__main__":
     ret = render_3d_from_pdb(pdb_file,
                              pdb_name,
                              )
+
+    annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations, ret['amino_ele_pos'])
 
     hsh = calc_hash_of_dict(ret)
 
