@@ -193,6 +193,40 @@ def get_view() -> dict:
     return ret
 
 
+def pdb_to_protein_atom_dict(pdb_str: str):
+    protein = defaultdict(dict)
+    atoms = {}
+    lines = pdb_str.split('\n')
+    for line in lines:
+        line = line.lstrip() # remove leading whitespace
+        record_name = line[:6]
+        if record_name == 'ATOM  ':
+            serial = int(line[6:11])
+            atom = line[12:16].strip()
+            alt_loc = line[16:17]
+            if alt_loc not in ['A', ' ']:
+                continue
+            resn = line[17:20]
+            chain = line[21:22]
+            resi = int(line[22:27])
+            x = float(line[30:38])
+            y = float(line[38:46])
+            z = float(line[46:54])
+            b = float(line[60:68])
+            elem = line[76:78].strip()
+            if not elem:
+                elem = line[12:14].strip()
+            hetflag = True if line[0] == 'H' else False
+            if chain not in protein:
+                protein[chain] = {'residues': []}
+            atoms[serial] = {'resn': resn, 'x': x, 'y': y, 'z': z, 'elem': elem,
+                                  'hetflag': hetflag, 'chain': chain, 'resi': resi,
+                                  'serial': serial, 'atom': atom, 'bonds': [],
+                                  'ss': 'c', 'color': 0xFFFFFF, 'b': b}
+
+    return {'atoms': atoms, 'protein': protein}
+
+
 def render_3d_from_pdb(pdb_file: str,
                        pdb_name: str) -> dict:
     """
@@ -209,12 +243,15 @@ def render_3d_from_pdb(pdb_file: str,
 
     # annotations = get_annotations(sequence_coverage, ptms, ptm_annotations, amino_ele_pos)
 
-    clean_pymol() # clean up pymol session
+    # test = pdb_to_protein_atom_dict(pdb_str)
+
+    clean_pymol()   # clean up pymol session
 
     return {
         'objs': objs,
         'view': view,
         'amino_ele_pos': amino_ele_pos,
+        'pdb_str': pdb_str,
         # 'annotations': annotations
     }
 
@@ -226,6 +263,7 @@ def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStr
     protein_model.pdb_id = pdb_name.split('.')[0]
     protein_model.id = calc_hash_of_dict(ret)
     protein_model.species = species
+    protein_model.pdb_id = ret['pdb_str']
     return ProteinStructure.from_model(protein_model)
 
 

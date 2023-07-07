@@ -15,6 +15,7 @@ from models import JobModel
 from database import Job, Access, Base, ProteinStructure
 from processing import worker
 from rendering import get_annotations
+from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
 
 load_dotenv()  # load environmental variables from .env
 
@@ -98,6 +99,13 @@ async def get_protein_list(job_number: str = Form(None)):
         raise HTTPException(status_code=404, detail="Job not found")
     seq_results = job.sequence_coverage_results
 
+    for seq_result in seq_results:
+        structure = session.query(ProteinStructure).filter(and_(ProteinStructure.protein_id == seq_result.protein_id,
+                                                                ProteinStructure.species == job.species)).first()
+        if structure is None:
+            seq_result.has_pdb = False
+        else:
+            seq_result.has_pdb = True
     return seq_results
 
 
@@ -116,11 +124,20 @@ async def get_protein_structure(job_number: str = Form(None), protein_id: str = 
             if structure is None:
                 raise HTTPException(status_code=404, detail="Protein structure not found")
 
-            annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations, structure.amino_ele_pos)
+            annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations,
+                                          structure.amino_ele_pos)
+
+            ret = pymol_obj_dict_to_str(structure.objs) + \
+                  color_dict_to_str(annotations) + \
+                  pymol_view_dict_to_str(structure.view)  + \
+                  f"bgcolor:{job.background_color}"
+
             return {
-                "view": structure.view,
-                "objs": structure.objs,
-                "annotations": annotations
+                # "view": structure.view,
+                # "objs": structure.objs,
+                # "annotations": annotations,
+                "pdb_str": structure.pdb_str,
+                "ret": ret
             }
 
     raise HTTPException(status_code=404, detail="Protein structure not found")

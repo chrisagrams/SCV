@@ -94,8 +94,9 @@ def pymol_obj_dict_to_str(obj: dict) -> str:
     for k, v in obj.items():
         if k == 'name':
             continue
-        ret.append(f"{k}: {compact_list(v)}")
+        ret.append(f"{k}:{compact_list(v)}")
     return '\n'.join(ret) + '\n'
+
 
 def pymol_view_dict_to_str(view: dict) -> str:
     matrix = view['rotation_matrix']
@@ -120,16 +121,17 @@ def pymol_view_dict_to_str(view: dict) -> str:
     ]
 
     view_str = ','.join([f"{round(val, 3)}" for val in view_values]) # round to 3 decimal places
-    return f"\nview:{view_str}\n"
+    return f"view:{view_str}\n"
 
 
 def color_values_to_str(colors: list):
-    return ",".join([str(round(color/256, 3)) for color in colors])
+    return ",".join([f"{color/256:0<5.3f}" for color in colors])
 
 
 def color_dict_to_str(color: dict) -> str:
     ret = ''
-    for k, v in color.items():
+    sorted_items = sorted(color.items(), key=lambda x: (x[0] != 'non_covered', x[0] != 'covered', x[0]))
+    for k, v in sorted_items:
         ret += f"color:{color_values_to_str(v['color'])}:{compact_range_list(v['indices'])}\n"
     return ret
 

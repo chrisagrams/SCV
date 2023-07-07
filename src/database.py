@@ -94,6 +94,7 @@ class ProteinStructure(Base):
     objs = Column(JSON)
     view = Column(JSON)
     amino_ele_pos = Column(JSON)
+    pdb_str = Column(Text)
 
     @classmethod
     def from_model(cls, model):
@@ -104,7 +105,8 @@ class ProteinStructure(Base):
             pdb_id=model.pdb_id,
             objs=model.objs,
             view=model.view,
-            amino_ele_pos=model.amino_ele_pos
+            amino_ele_pos=model.amino_ele_pos,
+            pdb_str=model.pdb_str
         )
 
 

@@ -108,6 +108,7 @@ class ProteinStructureModel(BaseModel):
     objs: dict = None
     view: dict = None
     amino_ele_pos: dict = None
+    pdb_str: str = None
 
     @classmethod
     def from_dict(cls, d):

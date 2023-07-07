@@ -1,0 +1,2 @@
+# Ignore db directory, this should be mounted as a volume
+db
