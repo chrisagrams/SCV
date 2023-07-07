@@ -263,7 +263,6 @@ def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStr
     protein_model.pdb_id = pdb_name.split('.')[0]
     protein_model.id = calc_hash_of_dict(ret)
     protein_model.species = species
-    protein_model.pdb_id = ret['pdb_str']
     return ProteinStructure.from_model(protein_model)
 
 

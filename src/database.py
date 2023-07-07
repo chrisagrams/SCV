@@ -1,13 +1,33 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, TypeDecorator, ForeignKey, Double, Boolean, Table, JSON
+from sqlalchemy import types, Column, Integer, String, Text, DateTime, TypeDecorator, ForeignKey, Double, Boolean, Table, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.mutable import Mutable
 import json
 import uuid
+import zstd
 from datetime import datetime
 
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
+
+
+class CompressedText(types.TypeDecorator):
+    impl = types.LargeBinary
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = zstd.compress(value.encode())
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = zstd.decompress(value).decode()
+        return value
+
+
+class MutableCompressedText(CompressedText, Mutable):
+    pass
 
 
 class StringUUID(TypeDecorator):
@@ -94,7 +114,7 @@ class ProteinStructure(Base):
     objs = Column(JSON)
     view = Column(JSON)
     amino_ele_pos = Column(JSON)
-    pdb_str = Column(Text)
+    pdb_str = Column(MutableCompressedText)
 
     @classmethod
     def from_model(cls, model):
