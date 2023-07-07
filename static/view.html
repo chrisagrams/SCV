@@ -298,7 +298,7 @@
     form.append('job_number', job);
 
     // Fetch job details, update legend and background color
-    fetch('/job_details', {
+    let jobDetailsPromise = fetch('/job_details', {
       method: 'POST',
       body: form
     })
@@ -308,10 +308,11 @@
       show_legend(json['ptm_annotations']);
       background_color = json['background_color'];
       ptm_annotations = json['ptm_annotations'];
+      return json; // Return the value from the jobDetailsPromise
     });
 
     // Fetch coverage data
-    fetch('/protein-list', {
+    let proteinListPromise = fetch('/protein-list', {
       method: 'POST',
       body: form
     })
@@ -319,13 +320,21 @@
     .then(arr => {
       console.log(arr);
       document.querySelector("#list_loading").classList.remove("spin-ani");
+      return arr; // Return the value from the proteinListPromise
+    });
+
+    // Once both promises are resolved, update the UI
+    Promise.all([jobDetailsPromise, proteinListPromise])
+    .then(([jobDetailsResult, proteinListResult]) => {
+      console.log(proteinListResult);
+      document.querySelector("#list_loading").classList.remove("spin-ani");
 
       // Sort by coverage
-      arr.sort((a,b) => {
+      proteinListResult.sort((a,b) => {
         return b['coverage'] - a['coverage'];
       })
 
-      arr.forEach(i => {
+      proteinListResult.forEach(i => {
         console.log(i);
         let c = new CoverageCard(
                 i['protein_id'],
