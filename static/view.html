@@ -110,7 +110,7 @@
           this.card.addEventListener("click", e => {
             if(!this.card.classList.contains("selected")) {
               clear_selected();
-              let prom = fetch_mol(this.percent_coverage, this.coverage_arr, this.protein_id); //fetch mol immediately on click, give promise to prom_handle
+              let prom = fetch_mol(this.protein_id); //fetch mol immediately on click, give promise to prom_handle
               this.card.classList.add("selected");
               document.querySelector('#molloading').classList.add('spin-ani');
               let container = glmol01.container[0].querySelector("canvas");
@@ -496,21 +496,12 @@
       start_autorotate();
   }
 
-  const fetch_mol = (percent_coverage, coverage_arr, protein_id) => {
+  const fetch_mol = (protein_id) => {
     // console.log(input);
     let form = new FormData();
-    form.append('job', job);
-    form.append('percent', percent_coverage);
+    form.append('job_number', job);
     form.append('protein_id', protein_id);
-    form.append('freqArr', coverage_arr);
-    form.append('background_color', background_color);
-    form.append('pdb_dest', pdb_dest);
-    if(id_ptm_idx_dict[protein_id] != undefined)
-      form.append('id_ptm_idx_dict', JSON.stringify(id_ptm_idx_dict[protein_id]));
-    else
-      form.append('id_ptm_idx_dict', '{}');
-    form.append('regex_dict', JSON.stringify(regex_dict));
-    return fetch('/3d-view', {
+    return fetch('/protein-structure', {
       method: 'POST',
       body: form
     }).then(response => response.json())
@@ -543,7 +534,7 @@
     prom.then(response => {
       // console.log(response);
       document.querySelector('#molloading').classList.remove('spin-ani');
-      draw_mol(response.pdbstr, response.ret);
+      draw_mol(response.pdb_str, response.ret);
       let coverage_rgb = hexToRgb(coverage_color);
       updateMolColor(1, coverage_rgb.r, coverage_rgb.g, coverage_rgb.b);
 

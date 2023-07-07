@@ -15,7 +15,7 @@ from models import JobModel
 from database import Job, Access, Base, ProteinStructure
 from processing import worker
 from rendering import get_annotations
-from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
+from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
 
 load_dotenv()  # load environmental variables from .env
 

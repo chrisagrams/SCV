@@ -1,5 +1,5 @@
-# Start from the official Python base image.
-FROM python:3.9
+# Start from official Ubuntu image
+FROM ubuntu:22.04
 
 # Copy the src directory into the container
 COPY ./src /src
@@ -22,11 +22,11 @@ WORKDIR /src
 # Copy the requierements file into the container at /src
 COPY requirements.txt /src
 
+# Install Nginx, Python, and PyMOL
+RUN apt-get update && apt-get install -y nginx python3 python3-pip pymol
+
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /src/requirements.txt
-
-# Install Nginx and PyMOL
-RUN apt-get update && apt-get install -y nginx && apt-get install -y pymol
 
 # Create nginx group and user
 RUN groupadd -r nginx && useradd -r -g nginx nginx
