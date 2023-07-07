@@ -32,10 +32,12 @@ if os.getenv('ENVIRONMENT') == 'development':
 logger = logging.getLogger("uvicorn")  # create logger
 
 engine = create_engine(os.getenv('DATABASE_URL'))  # create SQLAlchemy engine
+engine_readonly = create_engine(os.getenv('DATABASE_URL') + "?mode=ro")  # create SQLAlchemy engine for readonly access
 
 Base.metadata.create_all(engine)  # create database tables
 
-Session = sessionmaker(bind=engine)  # create session factory
+SessionLocal = sessionmaker(bind=engine)  # create session factory
+SessionLocalReadonly = sessionmaker(bind=engine_readonly)  # create session factory for readonly access
 
 # Add CORS middleware to allow requests from any origin
 
@@ -67,7 +69,7 @@ async def submit_job(job: JobModel, request: Request):
         method=request.method
     )  # store request as access
 
-    with Session() as session:
+    with SessionLocal() as session:
         session.add(new_job)
         session.add(access)
         session.commit()
@@ -75,7 +77,7 @@ async def submit_job(job: JobModel, request: Request):
         job_number = new_job.job_number  # get job number
 
         # Start worker thread
-        t = threading.Thread(target=worker, args=(job_number, Session(),))
+        t = threading.Thread(target=worker, args=(job_number, SessionLocal(),))
         t.start()
 
         return {"job_number": job_number}
@@ -83,7 +85,7 @@ async def submit_job(job: JobModel, request: Request):
 
 @app.post("/job_details")
 async def get_job_details(job_number: str = Form(None)):
-    with Session() as session:
+    with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found")
@@ -92,7 +94,7 @@ async def get_job_details(job_number: str = Form(None)):
 
 @app.post("/protein-list")
 async def get_protein_list(job_number: str = Form(None)):
-    with Session() as session:
+    with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found")
@@ -113,7 +115,7 @@ async def get_protein_list(job_number: str = Form(None)):
 
 @app.post("/protein-structure")
 async def get_protein_structure(job_number: str = Form(None), protein_id: str = Form(None)):
-    with Session() as session:
+    with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found")
