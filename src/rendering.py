@@ -160,9 +160,9 @@ def get_objs(session: dict, pdb_name: str) -> dict:
 
 
 def get_view() -> dict:
-    # pymol.cmd.turn('z', 180)
+    pymol.cmd.turn('z', 180)
     view = pymol.cmd.get_view()
-    # pymol.cmd.turn('z', 180)
+    pymol.cmd.turn('z', 180)
 
     # view = session['view']
 
