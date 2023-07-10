@@ -44,6 +44,27 @@ class StringUUID(TypeDecorator):
         return uuid.UUID(value)
 
 
+class UploadedPDB(Base):
+    __tablename__ = "uploaded_pdbs"
+    id = Column(StringUUID, primary_key=True, default=uuid.uuid4)
+    pdb_file = Column(Text)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    filesize = Column(Integer)
+    filename = Column(Text)
+    pdb_id = Column(Text)
+    job_number = Column(StringUUID, ForeignKey('jobs.job_number'), nullable=True)
+    job = relationship('Job', back_populates='pdb_file')
+
+    @classmethod
+    def from_model(cls, model):
+        return cls(
+            pdb_file=model.pdb_file,
+            filesize=model.filesize,
+            filename=model.filename,
+            pdb_id=model.pdb_id
+        )
+
+
 class Job(Base):
     __tablename__ = 'jobs'
 
@@ -55,6 +76,7 @@ class Job(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     sequence_coverage_results = relationship('SequenceCoverageResult', secondary='job_seq_result',
                                              back_populates='jobs')
+    pdb_file = relationship('UploadedPDB', back_populates='job')
 
     @classmethod
     def from_model(cls, model):
@@ -63,7 +85,7 @@ class Job(Base):
             psms=model.psms,
             ptm_annotations=model.ptm_annotations,
             background_color=model.background_color,
-            species=model.species
+            species=model.species,
         )
 
 
@@ -94,6 +116,7 @@ class SequenceCoverageResult(Base):
             ptms=model.ptms,
             has_pdb=model.has_pdb
         )
+
 
 # Job Result and Sequence Coverage Result junction table
 job_seq_result = Table(

@@ -81,6 +81,14 @@ class JobModel(BaseModel):
         return v
 
 
+class UploadedPDBModel(BaseModel):
+    id: str = None
+    pdb_file: str = None
+    filesize: int = None
+    filename: str = None
+    pdb_id: str = None
+
+
 class SequenceCoverageModel(BaseModel):
     id: str = None
     protein_id: str = None

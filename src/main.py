@@ -1,3 +1,4 @@
+import json
 import time
 import os
 import logging
@@ -5,14 +6,15 @@ import sqlite3
 import uuid
 import threading
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 from starlette.staticfiles import StaticFiles
+from typing import Optional, Union
 
-from models import JobModel
-from database import Job, Access, Base, ProteinStructure
+from models import JobModel, UploadedPDBModel
+from database import Job, Access, Base, ProteinStructure, UploadedPDB
 from processing import worker
 from rendering import get_annotations
 from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
@@ -60,21 +62,47 @@ async def echo(job: str = Form(None)):
 
 
 @app.post("/job")
-async def submit_job(job: JobModel, request: Request):
+async def submit_job(request: Request, job: str = Form(...), file: Optional[UploadFile] = None):
     logger.debug(f"Received job: {job}")
-    new_job = Job.from_model(job)  # convert JobModel to Job
+
+    job_dict = json.loads(job) # convert JSON string to dictionary
+
+    job_data = JobModel(**job_dict) # convert dictionary to JobModel
+
+    new_job = Job.from_model(job_data)  # convert JobModel to Job
     access = Access(
         ip=request.client.host,
         path=request.url.path,
         method=request.method
     )  # store request as access
 
+    pdb_file = None
+
+    if file:
+        logger.debug(f"Received file: {file.filename}")
+        pdb_upload = UploadedPDBModel(
+            pdb_file=file.file.read(),
+            filesize=file.file._file.tell(),
+            filename=file.filename,
+            pdb_id=file.filename.split("-")[1])
+
+        # store PDB file in database
+        pdb_file = UploadedPDB.from_model(pdb_upload)
+
     with SessionLocal() as session:
         session.add(new_job)
-        session.add(access)
+        # session.add(access)
         session.commit()
 
         job_number = new_job.job_number  # get job number
+
+        if pdb_file:
+            pdb_file.job_number = job_number
+            session.add(pdb_file)
+            session.commit()
+
+            # Update job pdb_id
+            new_job.pdb_id = pdb_file.pdb_id
 
         # Start worker thread
         t = threading.Thread(target=worker, args=(job_number, SessionLocal(),))
@@ -91,6 +119,7 @@ async def get_job_details(job_number: str = Form(None)):
             raise HTTPException(status_code=404, detail="Job not found")
 
         return job
+
 
 @app.post("/protein-list")
 async def get_protein_list(job_number: str = Form(None)):
