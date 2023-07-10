@@ -431,12 +431,17 @@
             species: species_menu.value
         };
 
+        let form = new FormData();
+
+        form.append('job', JSON.stringify(body));
+
+        let user_file = document.querySelector("#user_upload").files[0];
+        if (user_file)
+            form.append('file', user_file);
+
         fetch('/job', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
+            body: form
         })
         .then(async response => {
             if (response.ok)
