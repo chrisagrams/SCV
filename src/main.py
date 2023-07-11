@@ -155,9 +155,9 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
         return {"job_number": job_number}
 
     except json.JSONDecodeError:  # if JSON is invalid
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+        raise HTTPException(status_code=400, detail=[{"type": "decode_error", "msg": "Invalid JSON"}])
     except pydantic.ValidationError as ve:  # if JobModel or UploadedPDBModel is invalid
-        raise HTTPException(status_code=400, detail=ve.json())
+        raise HTTPException(status_code=400, detail=json.loads(ve.json()))
     except threading.ThreadError as te:
         raise HTTPException(status_code=500, detail=str(te))
     except SQLAlchemyError as se:

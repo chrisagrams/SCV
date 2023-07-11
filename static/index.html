@@ -446,22 +446,10 @@
         .then(async response => {
             if (response.ok)
                 return response.json();
-            else {
-                let decoder = new TextDecoder("utf-8");
-                let reader = response.body.getReader();
-                let response_text = "";
-
-                try {
-                    while (true) {
-                        let {done, value} = await reader.read();
-                        if (done) break;
-                        response_text += decoder.decode(value);
-                    }
-                } finally {
-                    reader.releaseLock();
-                }
-                throw new Error(response_text);
-            }
+            else
+                throw new Error('Error in fetch /job', {
+                    cause: {status: response.status, response: await response.json()}
+                });
         })
         .then(json => {
             console.log("received:" + json);
@@ -469,7 +457,17 @@
         })
         .catch(error => {
             console.error(error);
-            show_error("Internal server error: " + error.message);
+            console.error(error.cause);
+            switch (error.cause.status)
+            {
+                case 400:
+                    show_error(error.cause.response.detail[0].msg);
+                    break;
+                case 500:
+                    show_error("Internal server error");
+                    break;
+            }
+
         });
     }
 
