@@ -170,3 +170,5 @@ class Access(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     path = Column(String)
     method = Column(String)
+    job_number = Column(StringUUID, nullable=True) # nullable because some requests don't have job number. No relationship in case of invalid job number.
+

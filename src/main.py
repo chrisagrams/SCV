@@ -30,7 +30,7 @@ app = FastAPI(
     version="0.1.0",
 )  # create FastAPI instance
 
-limiter = Limiter(key_func=get_remote_address) # create rate limiter
+limiter = Limiter(key_func=get_remote_address)  # create rate limiter
 app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -87,6 +87,14 @@ async def echo(request: Request, job: str = Form(None)):
     Basic test to ensure API is responding to requests. Echoes back the job ID that was sent in the request.
     """
     logger.info(f"/test received job ID: {job}")
+    try:
+        access = Access(ip=request.client.host, path=request.url.path, method=request.method)
+        with SessionLocal() as session:
+            session.add(access)
+            session.commit()
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Database error")
     return {"job": job}
 
 
@@ -123,19 +131,22 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
             pdb_file = UploadedPDB.from_model(pdb_upload)
 
         with SessionLocal() as session:  # create session, locks database!
-            session.add(new_job)
-            session.add(access)
-            session.commit()
+            session.add(new_job)  # add job to db
+            session.commit()  # commit job to db
 
             job_number = new_job.job_number  # get job number
+
+            access.job_number = job_number  # add job number to access
+            session.add(access)  # add access to db
 
             if pdb_file:
                 pdb_file.job_number = job_number
                 session.add(pdb_file)
-                session.commit()
 
                 # Update job pdb_id
                 new_job.pdb_id = pdb_file.pdb_id
+
+            session.commit()  # commit access and pdb file to db
 
         # Start worker thread, pass session factory to worker
         t = threading.Thread(target=worker, args=(job_number, SessionLocal(),))
@@ -157,65 +168,90 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
 
 @app.post("/job_details")
 async def get_job_details(request: Request, job_number: str = Form(None)):
-    with SessionLocalReadonly() as session:
-        job = session.query(Job).filter(Job.job_number == job_number).first()
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        with SessionLocal() as session:
+            session.add(access)
+            session.commit()
 
-        return job
+        with SessionLocalReadonly() as session:
+            job = session.query(Job).filter(Job.job_number == job_number).first()
+            if job is None:
+                raise HTTPException(status_code=404, detail="Job not found")
+            return job
+
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @app.post("/protein-list")
 async def get_protein_list(request: Request, job_number: str = Form(None)):
-    with SessionLocalReadonly() as session:
-        job = session.query(Job).filter(Job.job_number == job_number).first()
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        with SessionLocal() as session:
+            session.add(access)
+            session.commit()
+        with SessionLocalReadonly() as session:
+            job = session.query(Job).filter(Job.job_number == job_number).first()
+            if job is None:
+                raise HTTPException(status_code=404, detail="Job not found")
 
-        seq_results = job.sequence_coverage_results
+            seq_results = job.sequence_coverage_results
 
-        for seq_result in seq_results:
-            structure = session.query(ProteinStructure).filter(
-                and_(ProteinStructure.protein_id == seq_result.protein_id,
-                     ProteinStructure.species == job.species)).first()
-            if structure is None:
-                seq_result.has_pdb = False
-            else:
-                seq_result.has_pdb = True
+            for seq_result in seq_results:
+                structure = session.query(ProteinStructure).filter(
+                    and_(ProteinStructure.protein_id == seq_result.protein_id,
+                         ProteinStructure.species == job.species)).first()
+                if structure is None:
+                    seq_result.has_pdb = False
+                else:
+                    seq_result.has_pdb = True
 
-        return seq_results
+            return seq_results
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @app.post("/protein-structure")
 async def get_protein_structure(request: Request, job_number: str = Form(None), protein_id: str = Form(None)):
-    with SessionLocalReadonly() as session:
-        job = session.query(Job).filter(Job.job_number == job_number).first()
-        if job is None:
-            raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        with SessionLocal() as session:
+            session.add(access)
+            session.commit()
+        with SessionLocalReadonly() as session:
+            job = session.query(Job).filter(Job.job_number == job_number).first()
+            if job is None:
+                raise HTTPException(status_code=404, detail="Job not found")
 
-        seq_results = job.sequence_coverage_results
+            seq_results = job.sequence_coverage_results
 
-        for seq_result in seq_results:
-            if seq_result.protein_id == protein_id:
-                structure = session.query(ProteinStructure).filter(and_(ProteinStructure.protein_id == protein_id,
-                                                                        ProteinStructure.species == job.species)).first()
-                if structure is None:
-                    raise HTTPException(status_code=404, detail="Protein structure not found")
+            for seq_result in seq_results:
+                if seq_result.protein_id == protein_id:
+                    structure = session.query(ProteinStructure).filter(and_(ProteinStructure.protein_id == protein_id,
+                                                                            ProteinStructure.species == job.species)).first()
+                    if structure is None:
+                        raise HTTPException(status_code=404, detail="Protein structure not found")
 
-                annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations,
-                                              structure.amino_ele_pos)
+                    annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations,
+                                                  structure.amino_ele_pos)
 
-                ret = pymol_obj_dict_to_str(structure.objs) + \
-                      color_dict_to_str(annotations) + \
-                      pymol_view_dict_to_str(structure.view) + \
-                      f"bgcolor:{job.background_color}"
+                    ret = pymol_obj_dict_to_str(structure.objs) + \
+                          color_dict_to_str(annotations) + \
+                          pymol_view_dict_to_str(structure.view) + \
+                          f"bgcolor:{job.background_color}"
 
-                return {
-                    # "view": structure.view,
-                    # "objs": structure.objs,
-                    # "annotations": annotations,
-                    "pdb_str": structure.pdb_str,
-                    "ret": ret
-                }
+                    return {
+                        # "view": structure.view,
+                        # "objs": structure.objs,
+                        # "annotations": annotations,
+                        "pdb_str": structure.pdb_str,
+                        "ret": ret
+                    }
 
-    raise HTTPException(status_code=404, detail="Protein structure not found")
+        raise HTTPException(status_code=404, detail="Protein structure not found")
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Database error")
