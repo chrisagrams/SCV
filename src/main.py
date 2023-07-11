@@ -1,17 +1,17 @@
 import json
-import time
 import os
 import logging
-import sqlite3
-import uuid
 import threading
+import pydantic
+
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, and_
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.staticfiles import StaticFiles
-from typing import Optional, Union
+from typing import Optional
 
 from models import JobModel, UploadedPDBModel
 from database import Job, Access, Base, ProteinStructure, UploadedPDB
@@ -55,7 +55,6 @@ app.add_middleware(
 async def echo(job: str = Form(None)):
     """
     Basic test to ensure API is responding to requests. Echoes back the job ID that was sent in the request.
-    :param job: job ID    :return:
     """
     logger.info(f"/test received job ID: {job}")
     return {"job": job}
@@ -63,52 +62,67 @@ async def echo(job: str = Form(None)):
 
 @app.post("/job")
 async def submit_job(request: Request, job: str = Form(...), file: Optional[UploadFile] = None):
-    logger.debug(f"Received job: {job}")
+    """
+    Endpoint for submitting a job to the API. Accepts a JSON string containing the job data, and an optional PDB file.
+    Starts a worker thread to process the job.
+    """
+    try:
+        logger.debug(f"Received job: {job}")
 
-    job_dict = json.loads(job) # convert JSON string to dictionary
+        job_dict = json.loads(job)  # convert JSON string to dictionary
 
-    job_data = JobModel(**job_dict) # convert dictionary to JobModel
+        job_data = JobModel(**job_dict)  # convert dictionary to JobModel
 
-    new_job = Job.from_model(job_data)  # convert JobModel to Job
-    access = Access(
-        ip=request.client.host,
-        path=request.url.path,
-        method=request.method
-    )  # store request as access
+        new_job = Job.from_model(job_data)  # convert JobModel to Job
 
-    pdb_file = None
+        access = Access(ip=request.client.host, path=request.url.path, method=request.method)  # store request as access
 
-    if file:
-        logger.debug(f"Received file: {file.filename}")
-        pdb_upload = UploadedPDBModel(
-            pdb_file=file.file.read(),
-            filesize=file.file._file.tell(),
-            filename=file.filename,
-            pdb_id=file.filename.split("-")[1])
+        pdb_file = None
 
-        # store PDB file in database
-        pdb_file = UploadedPDB.from_model(pdb_upload)
+        if file:  # if a file was uploaded, store it in the database
+            logger.debug(f"Received file: {file.filename}")
+            if not file.filename.endswith(".pdb"):
+                raise HTTPException(status_code=400, detail="Uploaded file must be a PDB file.")
+            pdb_upload = UploadedPDBModel(
+                pdb_file=file.file.read(),
+                filesize=file.file._file.tell(),
+                filename=file.filename,
+                pdb_id=file.filename.split("-")[1])
 
-    with SessionLocal() as session:
-        session.add(new_job)
-        # session.add(access)
-        session.commit()
+            # store PDB file in database
+            pdb_file = UploadedPDB.from_model(pdb_upload)
 
-        job_number = new_job.job_number  # get job number
-
-        if pdb_file:
-            pdb_file.job_number = job_number
-            session.add(pdb_file)
+        with SessionLocal() as session:  # create session, locks database!
+            session.add(new_job)
+            session.add(access)
             session.commit()
 
-            # Update job pdb_id
-            new_job.pdb_id = pdb_file.pdb_id
+            job_number = new_job.job_number  # get job number
 
-        # Start worker thread
+            if pdb_file:
+                pdb_file.job_number = job_number
+                session.add(pdb_file)
+                session.commit()
+
+                # Update job pdb_id
+                new_job.pdb_id = pdb_file.pdb_id
+
+        # Start worker thread, pass session factory to worker
         t = threading.Thread(target=worker, args=(job_number, SessionLocal(),))
         t.start()
 
         return {"job_number": job_number}
+
+    except json.JSONDecodeError:  # if JSON is invalid
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    except pydantic.ValidationError as ve:  # if JobModel or UploadedPDBModel is invalid
+        raise HTTPException(status_code=400, detail=ve.json())
+    except threading.ThreadError as te:
+        raise HTTPException(status_code=500, detail=str(te))
+    except SQLAlchemyError as se:
+        raise HTTPException(status_code=500, detail=str(se))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/job_details")

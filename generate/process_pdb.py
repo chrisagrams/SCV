@@ -37,7 +37,7 @@ def process_pdb_file(pdb_file, max_retries=5, wait_time=5):
     engine = create_engine(os.getenv('DATABASE_URL'))
     Session = sessionmaker(bind=engine)
 
-    for attempt in range(max_retries):
+    for attempt in range(max_retries): # try max_retries times, wait for wait_time seconds between each attempt to reduce contention
         try:
             session = Session()
 
