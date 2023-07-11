@@ -36,7 +36,7 @@
                         <label class="mdc-text-field mdc-text-field--filled mdc-text-field--textarea mdc-text-field--no-label">
                             <span class="mdc-text-field__ripple"></span>
                             <span class="mdc-text-field__resizer">
-                    <textarea id="psm_textarea" class="mdc-text-field__input" spellcheck="false" cols="40" aria-label="Label" oninput="psm_ptm_test(this.value);"></textarea>
+                    <textarea id="psm_textarea" class="mdc-text-field__input" spellcheck="false" cols="40" aria-label="Label" oninput="get_psm_ptm(this.value);"></textarea>
                     </span>
                             <span class="mdc-line-ripple"></span>
                         </label>
@@ -172,7 +172,7 @@
             "CDGEANVFSDLHSLRQFTSR\n" +
             "ETFHGLKELAFSYLVWDSK\n" +
             "IKNIYVSDVLNMK";
-        psm_ptm_test(document.querySelector('#psm_textarea').value);
+        get_psm_ptm(document.querySelector('#psm_textarea').value);
         let color_choosers = document.querySelectorAll('.colorChooser');
         color_choosers[0].value = '#0022ff';
         color_choosers[1].value = '#ff00f7';
@@ -207,64 +207,48 @@
         '  </div>\n' +
         '</div>';
 
-    let checkboxes = [];
-
     let ptm_map = new Set();
     let selected_ptms = new Set();
     let regx_group = /(\(([\w]+)\)\[\d+\.?\d+\])/gm;
     let regx = /(\w{1}\[\d+\.?\d+\])/gm;
     let regx_psm_group = /\{([^\}]+)\}\[([^\]]+)\]|([^\n]+)/gms;
 
-    const clear_ptm_grid = () => {
-        let ptmGrid = document.querySelector('#ptm-grid');
-        while(ptmGrid.firstChild){
-            ptmGrid.firstChild.remove();
-        }
-    }
-
-    const populate_ptm_grid = (ptm_map) => {
-        let ptmGrid = document.querySelector('#ptm-grid');
-        ptm_map.forEach(ptm => {
-            let div = document.createElement('div');
-            div.classList.add('ptm-card');
-            let p = document.createElement('p');
-            p.textContent = ptm;
-            let checkbox = checkbox_template.cloneNode(true);
-            checkbox.dataset.ptm = ptm;
-            let colorChooser = document.createElement('input');
-            colorChooser.classList.add('colorChooser');
-            colorChooser.type = 'color';
-            colorChooser.value = '#ff0000';
-            colorChooser.dataset.ptm = ptm;
-            div.append(checkbox, p, colorChooser);
-            ptmGrid.append(div);
-        });
-    }
-
-    const add_to_ptm_grid = (ptm) => {
-        let ptmGrid = document.querySelector('#ptm-grid');
-        let div = document.createElement('div');
+     const createPtmCard = (ptm, id=null) => {
+        const div = document.createElement('div');
         div.classList.add('ptm-card');
-        div.id = ptm.replace('[', '_').replace(']', '_');
-        let p = document.createElement('p');
+        if (id) div.id = id;
+
+        const p = document.createElement('p');
         p.textContent = ptm;
-        let checkbox = checkbox_template.cloneNode(true);
+
+        const checkbox = checkbox_template.cloneNode(true);
         checkbox.dataset.ptm = ptm;
-        let colorChooser = document.createElement('input');
+
+        const colorChooser = document.createElement('input');
         colorChooser.classList.add('colorChooser');
         colorChooser.type = 'color';
         colorChooser.value = '#ff0000';
         colorChooser.dataset.ptm = ptm;
+
         div.append(checkbox, p, colorChooser);
-        ptmGrid.append(div);
+
+        return div;
     }
+
+    const add_to_ptm_grid = (ptm) => {
+        const ptmGrid = document.querySelector('#ptm-grid');
+        const id = ptm.replace('[', '_').replace(']', '_');
+        const ptmCard = createPtmCard(ptm, id);
+        ptmGrid.append(ptmCard);
+    }
+
 
     const remove_from_ptm_grid = (ptm) => {
         let ptmGrid = document.querySelector('#ptm-grid');
         ptmGrid.querySelector("#"+ptm.replace('[', '_').replace(']', '_')).remove();
     }
 
-    const psm_ptm_test = (input) => {
+    const get_psm_ptm = (input) => {
         // ptm_map = new Set();
         let new_ptm_map = new Set();
 
@@ -313,70 +297,11 @@
         return groups;
     }
 
-    const psm_ptm = (input) => {
-        ptm_map = new Set();
-        selected_ptms = new Set();
-        let ptmGrid = document.querySelector('#ptm-grid');
-        while(ptmGrid.firstChild){
-            ptmGrid.firstChild.remove();
-        }
-        let newline_list = input.split(/\r?\n/);
-        let arrStr = encodeURIComponent(JSON.stringify(newline_list));
-
-        newline_list.forEach(pep => {
-            let group_matches = pep.match(regx_group);
-            if (group_matches !=  null) {
-                group_matches.forEach(match => {
-                    ptm_map.add(match);
-                })
-            }
-            let matches = pep.match(regx);
-            if (matches != null) {
-                matches.forEach(match => {
-                    ptm_map.add(match);
-                });
-            }
-        });
-        console.log(ptm_map);
-
-        populate_ptm_grid(ptm_map);
-    }
     const checkbox_handler = (checkbox) => {
         if(checkbox.checked)
             selected_ptms.add(checkbox.parentNode.parentNode.parentNode.dataset.ptm);
         else
             selected_ptms.delete(checkbox.parentNode.parentNode.parentNode.dataset.ptm);
-    }
-
-    const cleanup_newline_list = (input) => {
-        let newline_list = input.split(/\r?\n/);
-        let i = newline_list.length;
-        while(i--)
-        {
-            if (newline_list[i] == "")
-            {
-                newline_list.splice(i, 1);
-            }
-            else {
-                let curr = [];
-                let group_match = newline_list[i].match(regx_group);
-                if (group_match != null) {
-                    group_match.forEach(m => {
-                        let par_regex = /([\w]+)/gm;
-                        let num_regex = /(\[\d+\.?\d+\])/gm;
-                        let num = m.match(num_regex);
-                        let sub = m.match(par_regex);
-
-                        for (let i = 0; i < sub[0].length; i++)
-                            curr.push(sub[0].charAt(i) + num[0]);
-                    });
-                    newline_list.splice(i, 1);
-                    newline_list.push(curr.join().replaceAll(',', ''));
-                }
-            }
-
-        }
-        return newline_list;
     }
 
 
@@ -425,7 +350,7 @@
     const send_job = () => {
         let ptms = get_selected_ptms();
         let body = {
-            psms: psm_ptm_test(document.querySelector("#psm_textarea").value),
+            psms: get_psm_ptm(document.querySelector("#psm_textarea").value),
             ptm_annotations: ptms,
             background_color: get_glmol_color(document.querySelector('#background_color').value),
             species: species_menu.value
@@ -472,7 +397,6 @@
     }
 
 
-    const psm_textfield = new mdc.textField.MDCTextField(document.querySelector('.mdc-text-field'));
     const species_menu = new mdc.select.MDCSelect(document.querySelector('.mdc-select'));
 
     const copy_to_clipboard = () => {
@@ -518,10 +442,5 @@
         return [r, g, b];
     }
 
-    const uuidv4 = () => {
-        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-        );
-    }
 </script>
 </html>
