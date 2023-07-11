@@ -1,0 +1,11 @@
+{
+  "//": "This JSON configuration file specifies the rate limits for each endpoint in the FastAPI app using slowapi.",
+  "//": "The format is 'endpoint': 'rate_limit'.",
+  "//": "'endpoint' is the path to the endpoint, and 'rate_limit' follows the format 'requests/time_period'.",
+  "//": "Example: '/limited-endpoint': '10/1minute' means 10 requests per minute for the '/limited-endpoint' endpoint.",
+  "/test": "10/1minute",
+  "/job": "10/1minute",
+  "/job_details": "10/1minute",
+  "/protein-list": "10/1minute",
+  "/protein-structure": "25/1minute"
+}

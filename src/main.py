@@ -11,6 +11,9 @@ from sqlalchemy import create_engine, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from typing import Optional
 
 from models import JobModel, UploadedPDBModel
@@ -27,6 +30,11 @@ app = FastAPI(
     version="0.1.0",
 )  # create FastAPI instance
 
+limiter = Limiter(key_func=get_remote_address) # create rate limiter
+app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 if os.getenv('ENVIRONMENT') == 'development':
     app.mount("/static", StaticFiles(directory="../static"), name="static")  # for development only
     app.mount("/js", StaticFiles(directory="../vendor/js"), name="js")  # for development only
@@ -42,7 +50,6 @@ SessionLocal = sessionmaker(bind=engine)  # create session factory
 SessionLocalReadonly = sessionmaker(bind=engine_readonly)  # create session factory for readonly access
 
 # Add CORS middleware to allow requests from any origin
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,8 +58,31 @@ app.add_middleware(
 )
 
 
+def load_limiter_config():
+    """
+    Loads rate limiter configuration from rates.json.
+    """
+    with open("../rates.json") as f:
+        limiter_config = json.load(f)
+        for endpoint, rate_limit in limiter_config.items():
+            limiter.limit(rate_limit, key_func=lambda _: endpoint)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Runs on app startup.
+    Loads rate limiter configuration and applies it to the API.
+    :return:
+    """
+    load_limiter_config()
+
+
+# === Endpoint definitions ===
+
+
 @app.post("/test")
-async def echo(job: str = Form(None)):
+async def echo(request: Request, job: str = Form(None)):
     """
     Basic test to ensure API is responding to requests. Echoes back the job ID that was sent in the request.
     """
@@ -126,7 +156,7 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
 
 
 @app.post("/job_details")
-async def get_job_details(job_number: str = Form(None)):
+async def get_job_details(request: Request, job_number: str = Form(None)):
     with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
@@ -136,7 +166,7 @@ async def get_job_details(job_number: str = Form(None)):
 
 
 @app.post("/protein-list")
-async def get_protein_list(job_number: str = Form(None)):
+async def get_protein_list(request: Request, job_number: str = Form(None)):
     with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
@@ -157,7 +187,7 @@ async def get_protein_list(job_number: str = Form(None)):
 
 
 @app.post("/protein-structure")
-async def get_protein_structure(job_number: str = Form(None), protein_id: str = Form(None)):
+async def get_protein_structure(request: Request, job_number: str = Form(None), protein_id: str = Form(None)):
     with SessionLocalReadonly() as session:
         job = session.query(Job).filter(Job.job_number == job_number).first()
         if job is None:
