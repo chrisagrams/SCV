@@ -1,3 +1,4 @@
+import configparser
 import json
 import os
 import logging
@@ -15,6 +16,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from typing import Optional
+from configparser import ConfigParser
 
 from models import JobModel, UploadedPDBModel
 from database import Job, Access, Base, ProteinStructure, UploadedPDB
@@ -23,6 +25,9 @@ from rendering import get_annotations
 from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
 
 load_dotenv()  # load environmental variables from .env
+
+log_config = ConfigParser()  # load logging configuration
+log_config.read('../logging.ini')
 
 app = FastAPI(
     title="scvAPI",
@@ -36,10 +41,48 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 if os.getenv('ENVIRONMENT') == 'development':
-    app.mount("/static", StaticFiles(directory="../static"), name="static")  # for development only
-    app.mount("/js", StaticFiles(directory="../vendor/js"), name="js")  # for development only
+    app.mount("/html", StaticFiles(directory="../static/html"), name="html")  # for development only
+    app.mount("/css", StaticFiles(directory="../static/css"), name="css")  # for development only
+    app.mount("/js", StaticFiles(directory="../static/js"), name="js")  # for development only
+    app.mount("/vendor/js", StaticFiles(directory="../vendor/js"), name="js")  # for development only
+
+# === Configure logger === #
 
 logger = logging.getLogger("uvicorn")  # create logger
+try:
+    log_level = log_config.get("Logging", "LogLevel")
+except configparser.NoSectionError or configparser.NoOptionError:
+    logger.warning("Could not find LogLevel in logging.ini, defaulting to INFO")
+    log_level = "INFO"
+numeric_level = getattr(logging, log_level.upper(), logging.INFO)
+logger.setLevel(numeric_level)
+
+# Disable propagation of log entries from Uvicorn logger to parent loggers
+logger.propagate = False
+
+# Create a console handler and set the log level
+console_handler = logging.StreamHandler()
+console_handler.setLevel(numeric_level)
+
+try:  # try to get log file path from logging.ini
+    log_file = log_config.get("Logging", "LogFile")
+except configparser.NoSectionError or configparser.NoOptionError:
+    logger.warning("Could not find LogFile in logging.ini, defaulting to scv.log")
+    log_file = "scv.log"
+file_handler = logging.FileHandler(log_file)
+file_handler.setLevel(numeric_level)
+
+# Create a formatter and add it to the handlers
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# Add the handlers to the logger
+if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+    logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+# === Configure database === #
 
 engine = create_engine(os.getenv('DATABASE_URL'))  # create SQLAlchemy engine
 engine_readonly = create_engine(os.getenv('DATABASE_URL') + "?mode=ro")  # create SQLAlchemy engine for readonly access
@@ -62,10 +105,13 @@ def load_limiter_config():
     """
     Loads rate limiter configuration from rates.json.
     """
-    with open("../rates.json") as f:
-        limiter_config = json.load(f)
-        for endpoint, rate_limit in limiter_config.items():
-            limiter.limit(rate_limit, key_func=lambda _: endpoint)
+    try:
+        with open("../rates.json") as f:
+            limiter_config = json.load(f)
+            for endpoint, rate_limit in limiter_config.items():
+                limiter.limit(rate_limit, key_func=lambda _: endpoint)
+    except FileNotFoundError:
+        logger.warning("Could not find rates.json, no rate limiting will be applied.")
 
 
 @app.on_event("startup")
@@ -76,6 +122,7 @@ async def startup_event():
     :return:
     """
     load_limiter_config()
+    logger.info("=== New instance started ===")
 
 
 # === Endpoint definitions ===

@@ -13,6 +13,9 @@ COPY static /src/static
 # Copy vendor directory into the container at /src
 COPY vendor /src/vendor
 
+# Copy rates.json
+COPY rates.json /src
+
 # Make db directory
 RUN mkdir /db
 

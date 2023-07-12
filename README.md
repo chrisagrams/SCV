@@ -53,3 +53,6 @@ To run this project locally using Docker, follow the steps below:
    ```bash
    docker run -v ./db:/db -d -p 8080:80 scv
    ```
+   
+## Configuration
+The application uses the following files for configuration: ".env", "rates.json", and "logging.ini".
