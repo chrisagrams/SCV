@@ -498,11 +498,15 @@
     return fetch('/protein-structure', {
       method: 'POST',
       body: form
-    }).then(response => response.json())
-      .then(json => {
-        return json;
-      });
-
+    })
+    .then(async response => {
+      if (response.ok)
+        return await response.json();
+      else
+        throw new Error("Error in fetch /protein-structure", {
+          cause: {status: response.status, response: await response.json()}
+        });
+    })
   }
 
   const draw_mol = (pdbstr, ret) => {
@@ -525,21 +529,25 @@
   }
 
   const prom_handle = (prom) => {
-    prom.then(response => {
-      // console.log(response);
-      document.querySelector('#molloading').classList.remove('spin-ani');
-      draw_mol(response.pdb_str, response.ret);
-      let coverage_rgb = hexToRgb(coverage_color);
-      updateMolColor(1, coverage_rgb.r, coverage_rgb.g, coverage_rgb.b);
+    prom
+        .then(response => {
+        // console.log(response);
+        document.querySelector('#molloading').classList.remove('spin-ani');
+        draw_mol(response.pdb_str, response.ret);
+        let coverage_rgb = hexToRgb(coverage_color);
+        updateMolColor(1, coverage_rgb.r, coverage_rgb.g, coverage_rgb.b);
 
-      let indicies = Object.keys(regex_dict);
-      indicies.forEach(i => {
-        let regex_val = regex_dict[i];
-        if (regex_val != undefined) {
-          updateMolColor(i + 2, regex_val[0], regex_val[1], regex_val[2]);
-        }
+        let indicies = Object.keys(regex_dict);
+        indicies.forEach(i => {
+          let regex_val = regex_dict[i];
+          if (regex_val != undefined) {
+            updateMolColor(i + 2, regex_val[0], regex_val[1], regex_val[2]);
+          }
+        });
+      })
+      .catch(error => {
+          show_error(error.cause.response.detail);
       });
-    });
   }
 
   const rotate = (r, dx ,dy) => {
