@@ -1,0 +1,128 @@
+/* Header overrides */
+#header {
+    margin-left: 15px;
+}
+
+#header h1,
+#header p {
+    text-align: left;
+}
+
+/* major_error styles */
+#major_error {
+    margin: 0;
+    position: absolute; top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 1;
+}
+
+/* toolbox styles */
+#toolbox {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    z-index: 123;
+    max-height: 50%;
+}
+
+/* toolbox on mobile */
+@media screen and (max-width: 600px) {
+    #toolbox {
+        top: 10px;
+        right: 10px;
+        justify-content: space-between;
+        height: 70%;
+        max-height: 70%;
+    }
+}
+
+/* toolbox containers (legend and tools) */
+#toolbox > div {
+    background-color: rgba(30, 32, 33, .10);
+    border-radius: 16px;
+    backdrop-filter: blur(6px);
+}
+
+/* tools container */
+#toolbox > #tools {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* tools within container (autorotate and capture) */
+#toolbox > #tools > span {
+    font-size: 36px;
+    margin: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.25s, filter 0.25s;
+
+}
+
+/* Add drop-shadow on hover */
+#toolbox > #tools > span:hover {
+    filter: drop-shadow(0px 0px 4px var(--mdc-theme-primary));
+}
+
+/* Add color on active */
+#toolbox > #tools > .active {
+    color: #018786;
+}
+
+/* legend container inside toolbox */
+#legend {
+    overflow-y: auto;
+}
+
+.legend-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* legend item text */
+.legend-item > p {
+    margin: 20px;
+}
+
+@media screen and (max-width: 600px) {
+    .legend-item > p {
+        margin: 15px;
+    }
+}
+
+/* legend item color circle */
+.colorCircle {
+    width: 32px;
+    height: 32px;
+    margin: auto 10px;
+    border-radius: 16px;
+    transition: filter 0.25s;
+}
+
+.colorCircle > input
+{
+    margin: auto 0 !important;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+@media screen and (max-width: 600px) {
+    .colorCircle {
+        width: 24px;
+        height: 24px;
+        margin: auto 5px;
+        border-radius: 12px;
+    }
+}
+
+.colorCircle:hover {
+    filter: drop-shadow(0px 0px 4px var(--mdc-theme-primary));
+}
+

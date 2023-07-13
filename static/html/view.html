@@ -7,18 +7,17 @@
     <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons%7CMaterial+Icons+Outlined">
     <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/view.css">
     <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <title>SCV</title>
   </head>
 
   <body>
-    <div id="not_done" style="display: none;">
-      <p>Job not yet done.</p>
-      <p>Please refresh the page or come back at a later time.</p>
+    <div id="major_error" style="display: none;">
     </div>
-    <div id="header" style="margin-left: 15px;" onclick="window.location = '/';" title="Home">
-      <h1 style="text-align: left;">SCV</h1>
-      <p style="text-align: left;">Sequence Coverage Visualizer</p>
+    <div id="header" onclick="window.location = '/';" title="Home">
+      <h1>SCV</h1>
+      <p>Sequence Coverage Visualizer</p>
     </div>
     <div id="toolbox">
       <div id="legend"></div>

@@ -241,6 +241,24 @@
     return (url_parts.length > 1) ? url_parts[1] : null;
   }
 
+  const show_major_error = (status, message) => {
+    const major_error = document.querySelector("#major_error");
+
+    // Remove all child elements
+    while (major_error.firstChild) {
+      major_error.removeChild(major_error.firstChild);
+    }
+
+    let p_status = document.createElement("p");
+    p_status.textContent = "Status: " + status;
+
+    let p_message = document.createElement("p");
+    p_message.textContent = message;
+    major_error.append(p_status, p_message);
+
+    major_error.style.display = "block";
+  }
+
   window.onload = () => {
     let form = new FormData();
     form.append('job_number', job);
@@ -250,13 +268,24 @@
       method: 'POST',
       body: form
     })
-    .then(response => response.json())
+    .then(async response => {
+      if (response.ok)
+        return response.json();
+      else
+        throw new Error('Error in fetch /job_details', {
+          cause: {status: response.status, response: await response.json()}
+        });
+    })
     .then(json => {
       console.log(json);
       show_legend(json['ptm_annotations']);
       background_color = json['background_color'];
       ptm_annotations = json['ptm_annotations'];
       return json; // Return the value from the jobDetailsPromise
+    })
+    .catch(err => {
+        console.error(err);
+        show_major_error(err.cause.status, err.cause.response.detail);
     });
 
     // Fetch coverage data
@@ -264,11 +293,19 @@
       method: 'POST',
       body: form
     })
-    .then(response => response.json())
-    .then(arr => {
-      console.log(arr);
-      document.querySelector("#list_loading").classList.remove("spin-ani");
-      return arr; // Return the value from the proteinListPromise
+    .then(async response => {
+      if(response.ok) {
+        document.querySelector("#list_loading").classList.remove("spin-ani");
+        return response.json();
+      }
+      else
+        throw new Error('Error in fetch /protein-list', {
+          cause: {status: response.status, response: await response.json()}
+        });
+    })
+    .catch(err => {
+      console.error(err);
+      show_major_error(err.cause.status, err.cause.response.detail);
     });
 
     // Once both promises are resolved, update the UI
