@@ -495,12 +495,12 @@ const fetch_mol = (protein_id) => {
     method: 'POST',
     body: form
   })
-  .then(async response => {
+  .then(response => {
     if (response.ok)
-      return await response.json();
+      return response.json();
     else
       throw new Error("Error in fetch /protein-structure", {
-        cause: {status: response.status, response: await response.json()}
+        cause: {status: response.status, response: response.json()}
       });
   })
 }
