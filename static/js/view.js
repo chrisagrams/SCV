@@ -60,6 +60,7 @@ class CoverageCard {
         if(!this.card.classList.contains("selected")) {
           clear_selected();
           let prom = fetch_mol(this.protein_id); //fetch mol immediately on click, give promise to prom_handle
+          pdb_dest = this.protein_id; //set global variable for pdb_dest
           this.card.classList.add("selected");
           document.querySelector('#molloading').classList.add('spin-ani');
           let container = glmol01.container[0].querySelector("canvas");
