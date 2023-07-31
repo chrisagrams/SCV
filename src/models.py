@@ -38,8 +38,6 @@ class JobModel(BaseModel):
             raise ValueError('PTM annotations must be specified.')
         if not isinstance(v, dict):
             raise ValueError('PTM annotations must be a dictionary.')
-        if len(v) == 0:
-            raise ValueError('PTM annotations must contain at least one group.')
 
         for key in v.keys():
             # Check if all keys are ASCII
