@@ -37,11 +37,13 @@ def process_pdb_file(pdb_file, max_retries=5, wait_time=5):
     engine = create_engine(os.getenv('DATABASE_URL'))
     Session = sessionmaker(bind=engine)
 
-    for attempt in range(max_retries): # try max_retries times, wait for wait_time seconds between each attempt to reduce contention
+    for attempt in range(
+            max_retries):  # try max_retries times, wait for wait_time seconds between each attempt to reduce contention
         try:
             session = Session()
 
-            mdl = get_db_model_from_pdb(pdb_file, os.path.basename(pdb_file), os.path.basename(pdb_file).split('-')[1], args.species)
+            mdl = get_db_model_from_pdb(pdb_file, os.path.basename(pdb_file), os.path.basename(pdb_file).split('-')[1],
+                                        args.species)
 
             # Check if entry already exists
             existing_entry = session.query(ProteinStructure).filter_by(id=mdl.id).first()
@@ -54,11 +56,13 @@ def process_pdb_file(pdb_file, max_retries=5, wait_time=5):
                 session.close()
                 return f"Added {pdb_file} to database as \"{mdl.id}.\""
         except sqlalchemy.exc.OperationalError as e:
-            if "database is locked" in str(e) and attempt < max_retries - 1:  # check if it's a locked error and if we haven't exceeded max_retries
+            if "database is locked" in str(
+                    e) and attempt < max_retries - 1:  # check if it's a locked error and if we haven't exceeded max_retries
                 time.sleep(wait_time)  # wait before retrying
                 continue
             else:
                 raise  # if it's a different OperationalError, or we've exceeded max_retries, raise the exception
+
 
 def main():
     # Get all PDB files in directory
