@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans%7COpen+Sans:light%7COpen+Sans:bold">
+    <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons%7CMaterial+Icons+Outlined">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/view.css">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <title>SCV</title>
+  </head>
+
+  <body>
+    <div id="major_error" style="display: none;">
+    </div>
+    <div id="error_box">
+        <span class="material-symbols-outlined">error</span>
+        <p id="error_message"></p>
+    </div>
+    <div id="header" onclick="window.location = '/';" title="Home">
+      <h1>SCV</h1>
+      <p>Sequence Coverage Visualizer</p>
+    </div>
+    <div id="toolbox">
+      <div id="legend"></div>
+      <div id="tools">
+        <span id="autorotate" class="material-icons active" title="Toggle Autorotate">cached</span>
+        <span id="capture" class="material-icons" title="Save Image">photo_camera</span>
+      </div>
+    </div>
+    <div style="overflow: hidden; height: 100%; width: 100%; flex-wrap: wrap-reverse; gap: 0;" class="flex-row">
+      <div id="list-container">
+        <span id="list_loading" class="material-icons-outlined loading spin-ani">autorenew</span>
+        <div class="protein-list-container">
+        </div>
+      </div>
+      <div id="glmol01">
+        <span id="molloading" class="material-icons-outlined loading">autorenew</span>
+      </div>
+      <textarea id="glmol01_src" style="display: none;"></textarea>
+      <br>
+      <textarea id="glmol01_rep" style="display: none;"></textarea>
+    </div>
+    <script src="/js/commons.js"></script>
+    <script src="/js/view.js"></script>
+    <script src="/vendor/js/jquery-1.7.min.js"></script>
+    <script src="/vendor/js/Three45.js"></script>
+    <script src="/vendor/js/GLmol37.js"></script>
+    <script src="/vendor/js/viewer.js"></script>
+  </body>
+</html>
