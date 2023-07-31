@@ -18,16 +18,16 @@ from slowapi.errors import RateLimitExceeded
 from typing import Optional
 from configparser import ConfigParser
 
-from models import JobModel, UploadedPDBModel
-from database import Job, Access, Base, ProteinStructure, UploadedPDB
-from processing import worker
-from rendering import get_annotations
-from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
+from src.models import JobModel, UploadedPDBModel
+from src.database import Job, Access, Base, ProteinStructure, UploadedPDB
+from src.processing import worker
+from src.rendering import get_annotations
+from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
 
-load_dotenv()  # load environmental variables from .env
+load_dotenv('.env')  # load environmental variables from .env
 
 log_config = ConfigParser()  # load logging configuration
-log_config.read('../logging.ini')
+log_config.read('./logging.ini')
 
 app = FastAPI(
     title="scvAPI",
@@ -41,10 +41,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 if os.getenv('ENVIRONMENT') == 'development':
-    app.mount("/html", StaticFiles(directory="../static/html"), name="html")  # for development only
-    app.mount("/css", StaticFiles(directory="../static/css"), name="css")  # for development only
-    app.mount("/js", StaticFiles(directory="../static/js"), name="js")  # for development only
-    app.mount("/vendor/js", StaticFiles(directory="../vendor/js"), name="js")  # for development only
+    app.mount("/html", StaticFiles(directory="./static/html"), name="html")  # for development only
+    app.mount("/css", StaticFiles(directory="./static/css"), name="css")  # for development only
+    app.mount("/js", StaticFiles(directory="./static/js"), name="js")  # for development only
+    app.mount("/vendor/js", StaticFiles(directory="./vendor/js"), name="js")  # for development only
 
 # === Configure logger === #
 
@@ -106,7 +106,7 @@ def load_limiter_config():
     Loads rate limiter configuration from rates.json.
     """
     try:
-        with open("../rates.json") as f:
+        with open("./rates.json") as f:
             limiter_config = json.load(f)
             for endpoint, rate_limit in limiter_config.items():
                 limiter.limit(rate_limit, key_func=lambda _: endpoint)

@@ -4,8 +4,8 @@ FROM ubuntu:22.04
 # Copy the src directory into the container
 COPY ./src /src
 
-# Copy .env file into the container at /src
-COPY .env /src
+# Copy .env file into the container
+COPY .env ./
 
 # Copy static directory into the container at /src
 COPY static /src/static
@@ -14,13 +14,10 @@ COPY static /src/static
 COPY vendor /src/vendor
 
 # Copy rates.json
-COPY rates.json /src
+COPY rates.json ./
 
 # Make db directory
 RUN mkdir /db
-
-# Set the working directory to /src
-WORKDIR /src
 
 # Copy the requierements file into the container at /src
 COPY requirements.txt /src
@@ -47,4 +44,4 @@ RUN chown -R nginx:nginx /src/static
 RUN nginx -t
 
 # Set the command to start Nginx and run the uvicorn server
-CMD service nginx start && uvicorn main:app --host 0.0.0.0 --port 8000
+CMD service nginx start && uvicorn src.main:app --host 0.0.0.0 --port 8000
