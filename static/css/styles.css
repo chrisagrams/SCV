@@ -341,6 +341,11 @@ hr {
     word-wrap: break-word;
 }
 
+.sequence > p {
+    font-family: monospace;
+    font-size: 18px;
+}
+
 .selected > .sequence {
     display: block;
 }

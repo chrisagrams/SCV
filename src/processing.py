@@ -107,8 +107,21 @@ def process_aho_result(aho_result, ptm_index_line_dict, peptide_psm_dict, psm_gr
                     # Find all occurrences of ptm in psm
                     ptm_occurrences = [m.start() for m in re.finditer(ptm_pattern, psm)]
 
+                    # FIX: find other ptm positions as well
+                    ptm_positions = [m.span() for m in re.finditer(r"\[(.*?)\]", psm)]
+                    ptm_end_pos = [i[1] for i in ptm_positions]
+                    ptm_len = [i[1] - i[0] for i in ptm_positions]
+                    ptm_offset = [sum(ptm_len[:idx + 1]) for idx, value in enumerate(ptm_len)]
+                    pos_shift_dict = dict(zip(ptm_end_pos, ptm_offset))
+                    ptm_shift_dict= {}
+                    current_shift = 0
+                    for i in range(len(psm)):
+                        if i in pos_shift_dict:
+                            current_shift = pos_shift_dict[i]
+                        ptm_shift_dict[i] = current_shift
+
                     # Adjust the index for occurrences
-                    adjusted_occurrences = [ind - i * (len(ptm) - 1) for i, ind in enumerate(ptm_occurrences)]
+                    adjusted_occurrences = [ind - ptm_shift_dict[ind] for ind in ptm_occurrences]
 
                     # Increment the count in ptm_index_line_dict
                     for indx in adjusted_occurrences:
