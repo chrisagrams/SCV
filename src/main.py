@@ -18,11 +18,11 @@ from slowapi.errors import RateLimitExceeded
 from typing import Optional
 from configparser import ConfigParser
 
-from src.models import JobModel, UploadedPDBModel
-from src.database import Job, Access, Base, ProteinStructure, UploadedPDB
+from src.models import JobModel, UploadedPDBModel, SequenceCoverageModel
+from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
 from src.processing import worker
 from src.rendering import get_annotations
-from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str
+from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
 
 load_dotenv('.env')  # load environmental variables from .env
 
@@ -32,7 +32,7 @@ log_config.read('./logging.ini')
 app = FastAPI(
     title="scvAPI",
     description="API for the SCV web application.",
-    version="0.1.0",
+    version="1.2.0",
 )  # create FastAPI instance
 
 limiter = Limiter(key_func=get_remote_address)  # create rate limiter
@@ -302,3 +302,46 @@ async def get_protein_structure(request: Request, job_number: str = Form(None), 
     except SQLAlchemyError as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Database error")
+
+
+@app.post("/external-job")
+async def external_job(request: Request,
+                       sequence_model: SequenceCoverageModel,
+                       job_model: JobModel):
+    try:
+        if sequence_model is None:
+            raise HTTPException(status_code=500, detail="Sequence model not provided")
+        if job_model is None:
+            raise HTTPException(status_code=500, detail="Job model not provided")
+
+        new_job = Job.from_model(job_model)
+
+        with SessionLocal() as session:  # create session, locks database!
+            session.add(new_job)  # add job to db
+            session.commit()  # commit job to db
+
+            job_number = new_job.job_number
+
+            # Convert to dict so that we can make a hash using calc_hash_of_dict()
+            seq_dict = SequenceCoverageModel.to_dict(sequence_model)
+            sequence_model.id = calc_hash_of_dict(seq_dict)
+
+            # Check if hash exists. If it does, don't make a new model.
+            seq_cov_res = session.query(SequenceCoverageResult).filter(
+                SequenceCoverageResult.id == sequence_model.id).first()
+
+            if seq_cov_res is None:
+                new_sequence_coverage = SequenceCoverageResult.from_model(sequence_model)
+                new_job.sequence_coverage = new_sequence_coverage
+                new_sequence_coverage.jobs.append(new_job)
+                session.add(new_sequence_coverage)
+            else:
+                seq_cov_res.jobs.append(new_job)
+
+            session.commit()
+
+        return {"job_number": job_number}
+
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=404)
