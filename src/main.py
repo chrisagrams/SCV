@@ -206,11 +206,11 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
     except pydantic.ValidationError as ve:  # if JobModel or UploadedPDBModel is invalid
         raise HTTPException(status_code=400, detail=json.loads(ve.json()))
     except threading.ThreadError as te:
-        raise HTTPException(status_code=500, detail=str(te))
+        raise HTTPException(status_code=500, detail="Internal error.")
     except SQLAlchemyError as se:
-        raise HTTPException(status_code=500, detail=str(se))
+        raise HTTPException(status_code=500, detail="Internal error.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal error.")
 
 
 @app.post("/job_details")
