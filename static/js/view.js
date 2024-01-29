@@ -66,6 +66,7 @@ class CoverageCard {
           let container = glmol01.container[0].querySelector("canvas");
           container.style.opacity = "0";
           container.addEventListener("transitionend", e => prom_handle(prom), {once: true});
+          set_open_source(this.protein_id); // set "Open Alphafold" protein-id
         }
       });
     }
@@ -254,6 +255,12 @@ const show_major_error = (status, message) => {
   major_error.append(p_status, p_message);
 
   major_error.style.display = "block";
+}
+
+const set_open_source = (protein_id) => {
+  document.querySelector("#source").querySelector("#wrap").addEventListener("click", e => {
+    window.open('https://alphafold.ebi.ac.uk/entry/' + protein_id,  '_blank');
+  })
 }
 
 window.onload = () => {

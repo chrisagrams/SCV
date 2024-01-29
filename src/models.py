@@ -105,6 +105,20 @@ class SequenceCoverageModel(BaseModel):
         except ValidationError as e:
             raise ValueError(e)
 
+    @classmethod
+    def to_dict(cls, obj):
+        return {
+            'id': obj.id,
+            'protein_id': obj.protein_id,
+            'coverage': obj.coverage,
+            'sequence': obj.sequence,
+            'UNID': obj.UNID,
+            'description': obj.description,
+            'sequence_coverage': obj.sequence_coverage,
+            'ptms': obj.ptms,
+            'has_pdb': obj.has_pdb
+        }
+
 
 class ProteinStructureModel(BaseModel):
     id: str = None
