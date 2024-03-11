@@ -1,0 +1,20 @@
+version: '3.4'
+
+services:
+  scv:
+    image: scv
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      ENVIRONMENT: production
+    volumes:
+      - ./db:/db
+  nginx:
+    image: nginx:latest
+    ports:
+      - 8080:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/www/data:ro
+      - ./vendor:/www/vendor:ro
