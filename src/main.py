@@ -270,8 +270,11 @@ async def get_protein_structure(request: Request, job_number: str = Form(None), 
             session.commit()
         with SessionLocalReadonly() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
-            if job is None:
-                raise HTTPException(status_code=404, detail="Job not found")
+            if protein_id is None:
+                raise HTTPException(status_code=404, detail="Protein structure not found")
+            if job_number is None:
+                structure = session.query(ProteinStructure).filter(protein_id == protein_id).first()
+                return structure
 
             seq_results = job.sequence_coverage_results
 
