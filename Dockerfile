@@ -1,6 +1,9 @@
 # Start from official Ubuntu image
 FROM ubuntu:22.04
 
+# Install Python, and PyMOL
+RUN apt-get update && apt-get install -y python3 python3-pip pymol
+
 # Copy the src directory into the container
 COPY ./src /src
 
@@ -21,9 +24,6 @@ RUN mkdir /db
 
 # Copy the requierements file into the container at /src
 COPY requirements.txt /src
-
-# Install Python, and PyMOL
-RUN apt-get update && apt-get install -y python3 python3-pip pymol
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /src/requirements.txt
