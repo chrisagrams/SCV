@@ -1,5 +1,13 @@
 import re
 from pydantic import BaseModel, ValidationError, validator
+from typing import List
+
+class USIModel(BaseModel):
+    pxid: str = None
+    filename: str = None
+    scan: int = None
+    psm: str = None
+    charge: int = None
 
 
 class JobModel(BaseModel):
@@ -7,6 +15,7 @@ class JobModel(BaseModel):
     ptm_annotations: dict = None
     background_color: int = None
     species: str = None
+    usis: List[USIModel] = []
 
     @validator('psms')
     def validate_psms(cls, v):

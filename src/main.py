@@ -4,13 +4,14 @@ import os
 import logging
 import threading
 import pydantic
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, and_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 from starlette.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -19,7 +20,7 @@ from typing import Optional
 from configparser import ConfigParser
 
 from src.models import JobModel, UploadedPDBModel, SequenceCoverageModel
-from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
+from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult, USI
 from src.processing import worker
 from src.rendering import get_annotations
 from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
@@ -222,7 +223,8 @@ async def get_job_details(request: Request, job_number: str = Form(None)):
             session.commit()
 
         with SessionLocalReadonly() as session:
-            job = session.query(Job).filter(Job.job_number == job_number).first()
+            # job = session.query(Job).filter(Job.job_number == job_number).first()
+            job = session.query(Job).options(joinedload(Job.usis)).filter(Job.job_number == job_number).first()
             if job is None:
                 raise HTTPException(status_code=404, detail="Job not found")
             return job
@@ -340,6 +342,13 @@ async def external_job(request: Request,
                 session.add(new_sequence_coverage)
             else:
                 seq_cov_res.jobs.append(new_job)
+
+            if job_model.usis:
+                for usi_data in job_model.usis:
+                    usi_instance = USI(**usi_data.dict())
+                    usi_instance.jobs.append(new_job)
+                    new_job.usis.append(usi_instance)
+                    session.add(usi_instance)
 
             session.commit()
 

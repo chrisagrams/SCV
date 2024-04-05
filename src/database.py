@@ -41,7 +41,12 @@ class StringUUID(TypeDecorator):
         return str(value)
 
     def process_result_value(self, value, dialect):
-        return uuid.UUID(value)
+        if value is not None:
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                pass
+        return None
 
 
 class UploadedPDB(Base):
@@ -65,6 +70,25 @@ class UploadedPDB(Base):
         )
 
 
+job_usi_association = Table('job_usi_association', Base.metadata,
+    Column('job_id', StringUUID, ForeignKey('jobs.job_number')),
+    Column('usi_id', StringUUID, ForeignKey('usis.id'))
+)
+
+class USI(Base):
+    __tablename__ = 'usis'
+
+    id = Column(StringUUID, primary_key=True, default=uuid.uuid4)
+    pxid = Column(String)
+    filename = Column(String)
+    scan = Column(Integer)
+    psm = Column(String)
+    charge = Column(Integer)
+
+    # Define the many-to-many relationship with Job
+    jobs = relationship('Job', secondary=job_usi_association, back_populates='usis')
+
+
 class Job(Base):
     __tablename__ = 'jobs'
 
@@ -74,6 +98,9 @@ class Job(Base):
     background_color = Column(Integer)
     species = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    usis = relationship('USI', secondary=job_usi_association, back_populates='jobs')
+
     sequence_coverage_results = relationship('SequenceCoverageResult', secondary='job_seq_result',
                                              back_populates='jobs')
     pdb_file = relationship('UploadedPDB', back_populates='job')

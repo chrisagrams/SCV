@@ -1,0 +1,96 @@
+:root {
+    font-family: 'Open Sans', regular;
+    --mdc-theme-primary: #018786;
+}
+
+#usiObject {
+    margin:0;
+    box-shadow: inset 0px 5px 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+#usiLoading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    margin-left: -25px;
+    margin-top: -25px;
+    z-index: 10;
+}
+
+.blur {
+    filter: blur(2px);
+}
+
+.hide {
+    display: none !important;
+}
+
+i {
+    margin: 0;
+}
+
+select {
+    border-color: lightgrey;
+    border-radius: 4px;
+}
+
+option {
+    font-family: monospace;
+    font-size: 16px;
+}
+
+.parent-select-wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    transition: filter 0.25s;
+}
+
+.select-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+#generatedUSI {
+    font-family: monospace;
+}
+
+button {
+    font-family: "Open Sans";
+    background: white;
+    border: 2px solid lightgrey;
+    border-radius: 4px;
+    transition: box-shadow 0.25s;
+}
+
+button:hover {
+    cursor: pointer;
+    box-shadow: 0 0 0 2pt var(--mdc-theme-primary);
+}
+
+#lorikeetButton {
+    margin: auto;
+    font-size: 16px;
+    padding: 10px;
+}
+
+.spin-ani {
+    display: block;
+    animation: spin 0.75s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+
+}

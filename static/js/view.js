@@ -263,6 +263,14 @@ const set_open_source = (protein_id) => {
   })
 }
 
+const create_usi_section = () => {
+  let objectElement = document.createElement("object");
+  objectElement.setAttribute("type", "text/html");
+  objectElement.setAttribute("data", "usi.html");
+  objectElement.id = "usiObject";
+  document.body.appendChild(objectElement);
+}
+
 window.onload = () => {
   let form = new FormData();
   form.append('job_number', job);
@@ -285,6 +293,17 @@ window.onload = () => {
     show_legend(json['ptm_annotations']);
     background_color = json['background_color'];
     ptm_annotations = json['ptm_annotations'];
+    // If USIs exist:
+    if ('usis' in json) {
+      if(json['usis'].length > 0)
+        {
+          console.log("USIs provided.");
+          create_usi_section();
+          document.querySelector("#usiObject").addEventListener("load", () => {
+            populate_usi(json['usis']);
+          });
+        }
+    }
     return json; // Return the value from the jobDetailsPromise
   })
   .catch(err => {
