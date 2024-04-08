@@ -263,12 +263,15 @@ const set_open_source = (protein_id) => {
   })
 }
 
-const create_usi_section = () => {
+const create_usi_section = (usis) => {
   let objectElement = document.createElement("object");
+  document.querySelector("#usiObject").addEventListener("load", () => {
+    populate_usi(usis);
+  });
+  document.body.appendChild(objectElement);
   objectElement.setAttribute("type", "text/html");
   objectElement.setAttribute("data", "usi.html");
   objectElement.id = "usiObject";
-  document.body.appendChild(objectElement);
 }
 
 window.onload = () => {
@@ -298,10 +301,7 @@ window.onload = () => {
       if(json['usis'] != null) {
         if(Object.keys(json['usis']).length > 0) {
             console.log("USIs provided.");
-            create_usi_section();
-            document.querySelector("#usiObject").addEventListener("load", () => {
-              populate_usi(json['usis']);
-            });
+            create_usi_section(json['usis']);
         }
       }
     }
