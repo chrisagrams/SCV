@@ -1,4 +1,6 @@
 const populate_usi = (usis) => {
+    if(document.querySelector("#usiObject") === null)
+        return;
     const usiObject = document.querySelector("#usiObject").contentDocument;
     const psmList = usiObject.querySelector("#psm-list");
     const psms = Object.keys(usis);

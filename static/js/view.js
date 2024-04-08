@@ -265,7 +265,7 @@ const set_open_source = (protein_id) => {
 
 const create_usi_section = (usis) => {
   let objectElement = document.createElement("object");
-  document.querySelector("#usiObject").addEventListener("load", () => {
+  objectElement.addEventListener("load", () => {
     populate_usi(usis);
   });
   document.body.appendChild(objectElement);
