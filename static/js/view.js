@@ -270,7 +270,7 @@ const create_usi_section = (usis) => {
   });
   document.body.appendChild(objectElement);
   objectElement.setAttribute("type", "text/html");
-  objectElement.setAttribute("data", "usi.html");
+  objectElement.setAttribute("data", "/usi.html");
   objectElement.id = "usiObject";
 }
 
