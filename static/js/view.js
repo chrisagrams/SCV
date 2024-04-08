@@ -295,14 +295,15 @@ window.onload = () => {
     ptm_annotations = json['ptm_annotations'];
     // If USIs exist:
     if ('usis' in json) {
-      if(json['usis'].length > 0)
-        {
-          console.log("USIs provided.");
-          create_usi_section();
-          document.querySelector("#usiObject").addEventListener("load", () => {
-            populate_usi(json['usis']);
-          });
+      if(json['usis'] != null) {
+        if(Object.keys(json['usis']).length > 0) {
+            console.log("USIs provided.");
+            create_usi_section();
+            document.querySelector("#usiObject").addEventListener("load", () => {
+              populate_usi(json['usis']);
+            });
         }
+      }
     }
     return json; // Return the value from the jobDetailsPromise
   })

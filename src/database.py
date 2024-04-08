@@ -70,25 +70,6 @@ class UploadedPDB(Base):
         )
 
 
-job_usi_association = Table('job_usi_association', Base.metadata,
-    Column('job_id', StringUUID, ForeignKey('jobs.job_number')),
-    Column('usi_id', StringUUID, ForeignKey('usis.id'))
-)
-
-class USI(Base):
-    __tablename__ = 'usis'
-
-    id = Column(StringUUID, primary_key=True, default=uuid.uuid4)
-    pxid = Column(String)
-    filename = Column(String)
-    scan = Column(Integer)
-    psm = Column(String)
-    charge = Column(Integer)
-
-    # Define the many-to-many relationship with Job
-    jobs = relationship('Job', secondary=job_usi_association, back_populates='usis')
-
-
 class Job(Base):
     __tablename__ = 'jobs'
 
@@ -99,7 +80,7 @@ class Job(Base):
     species = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    usis = relationship('USI', secondary=job_usi_association, back_populates='jobs')
+    usis = Column(JSON)
 
     sequence_coverage_results = relationship('SequenceCoverageResult', secondary='job_seq_result',
                                              back_populates='jobs')
@@ -113,6 +94,7 @@ class Job(Base):
             ptm_annotations=model.ptm_annotations,
             background_color=model.background_color,
             species=model.species,
+            usis=model.usis,
         )
 
 
