@@ -166,20 +166,23 @@ const populate_info = () => {
     }
 
     lorikeetClickListener = () => {
-        set_loading();
-        localStorage.removeItem('lorikeetData');
-        fetchFromRepo(usi, spectraURLS['PRIDE'])
-            .then(result => {
-                window.open("lorikeetPopup.html", "lorikeetPopup", "width=1100,height=750");
-                localStorage.setItem('lorikeetData', JSON.stringify(repoToLorikeet(result)));
-            })
-            .catch(error => {
-                console.error(error);
-                window.alert("Error in fetching USI. USI possibly not found.");
-            })
-            .finally(() => {
-                unset_loading();
-            })
+        // set_loading();
+        window.open("https://www.ebi.ac.uk/pride/archive/usi?usi=" +
+            encodeURIComponent(usi) +
+            "&resultType=FULL", '_blank').focus();
+        // localStorage.removeItem('lorikeetData');
+        // fetchFromRepo(usi, spectraURLS['PRIDE'])
+        //     .then(result => {
+        //         window.open("lorikeetPopup.html", "lorikeetPopup", "width=1100,height=750");
+        //         localStorage.setItem('lorikeetData', JSON.stringify(repoToLorikeet(result)));
+        //     })
+        //     .catch(error => {
+        //         console.error(error);
+        //         window.alert("Error in fetching USI. USI possibly not found.");
+        //     })
+        //     .finally(() => {
+        //         unset_loading();
+        //     })
     }
 
     lorikeetButton.addEventListener("click", lorikeetClickListener);
