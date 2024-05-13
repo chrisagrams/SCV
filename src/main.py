@@ -18,7 +18,7 @@ from slowapi.errors import RateLimitExceeded
 from typing import Optional
 from configparser import ConfigParser
 
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
@@ -106,14 +106,21 @@ app.add_middleware(
 
 # === Configure Prometheus metrics === #
 REQUEST_COUNTER = Counter("request_count", "Total number of requests", ["endpoint"])
+REQUEST_LATENCY = Histogram("request_latency_seconds", "Request latency in seconds", ["endpoint"])
 
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
-    response = await call_next(request)
     endpoint = request.url.path
     if endpoint in ["/job", "/external-job", "/protein-structure"]:
-        REQUEST_COUNTER.labels(endpoint=endpoint).inc()
-    return response
+        with REQUEST_LATENCY.labels(endpoint=endpoint).time():
+            response = await call_next(request)
+            REQUEST_COUNTER.labels(endpoint=endpoint).inc()
+            return response
+    return await call_next(request)
+
+@app.get("/metrics")
+async def get_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.get("/metrics")
 async def get_metrics():
