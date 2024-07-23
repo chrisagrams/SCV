@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir --upgrade -r /src/requirements.txt
 COPY ./src /src
 
 # Copy .env file into the container
-COPY .env ./
+COPY .env /src
 
 # Copy static directory into the container at /src
 COPY static /src/static
@@ -25,10 +25,12 @@ COPY static /src/static
 COPY vendor /src/vendor
 
 # Copy rates.json
-COPY rates.json ./
+COPY rates.json /src
 
 # Make db directory
 RUN mkdir /db
 
+WORKDIR /src
+
 # Set the command  run the uvicorn server
-CMD uvicorn src.main:app --host 0.0.0.0 --port 8000
+CMD uvicorn main:app --host 0.0.0.0 --port 8000

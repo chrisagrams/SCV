@@ -22,11 +22,11 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from src.models import JobModel, UploadedPDBModel, SequenceCoverageModel
-from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
-from src.processing import worker
-from src.rendering import get_annotations
-from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
+from models import JobModel, UploadedPDBModel, SequenceCoverageModel
+from database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
+from processing import worker
+from rendering import get_annotations
+from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
 
 load_dotenv('.env')  # load environmental variables from .env
 

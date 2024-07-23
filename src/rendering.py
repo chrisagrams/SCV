@@ -11,9 +11,9 @@ from collections import defaultdict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.database import Base, Job, SequenceCoverageResult, ProteinStructure
-from src.helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to_str, color_dict_to_str, calc_hash_of_dict
-from src.models import ProteinStructureModel
+from database import Base, Job, SequenceCoverageResult, ProteinStructure
+from helpers import pymol_obj_extract, pymol_obj_dict_to_str, pymol_view_dict_to_str, color_dict_to_str, calc_hash_of_dict
+from models import ProteinStructureModel
 
 default_covered = [255, 62, 62]
 default_non_covered = [221, 221, 221]
