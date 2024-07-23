@@ -5,7 +5,6 @@ import logging
 import threading
 import pydantic
 import uuid
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +17,10 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from typing import Optional
 from configparser import ConfigParser
+
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from src.models import JobModel, UploadedPDBModel, SequenceCoverageModel
 from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
@@ -100,6 +103,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# === Configure Prometheus metrics === #
+REQUEST_COUNTER = Counter("request_count", "Total number of requests", ["endpoint"])
+REQUEST_LATENCY = Histogram("request_latency_seconds", "Request latency in seconds", ["endpoint"])
+
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    endpoint = request.url.path
+    if endpoint in ["/job", "/external-job", "/protein-structure"]:
+        with REQUEST_LATENCY.labels(endpoint=endpoint).time():
+            response = await call_next(request)
+            REQUEST_COUNTER.labels(endpoint=endpoint).inc()
+            return response
+    return await call_next(request)
+
+@app.get("/metrics")
+async def get_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+@app.get("/metrics")
+async def get_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 def load_limiter_config():
