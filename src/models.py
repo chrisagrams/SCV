@@ -1,12 +1,13 @@
 import re
 from pydantic import BaseModel, ValidationError, validator
-
+from typing import List
 
 class JobModel(BaseModel):
     psms: dict = None
     ptm_annotations: dict = None
     background_color: int = None
     species: str = None
+    usis: dict = None # Temporary, come up with better model later.
 
     @validator('psms')
     def validate_psms(cls, v):

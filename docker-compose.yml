@@ -1,0 +1,21 @@
+version: '3.4'
+
+services:
+  scv:
+    image: chrisagrams/scv
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      ENVIRONMENT: production
+    volumes:
+      - ./db:/db
+  scv-nginx:
+    image: chrisagrams/scv-nginx
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    ports:
+      - 8080:80
+    depends_on:
+      - scv

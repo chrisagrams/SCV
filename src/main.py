@@ -4,13 +4,13 @@ import os
 import logging
 import threading
 import pydantic
-
+import uuid
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, and_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 from starlette.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -18,11 +18,15 @@ from slowapi.errors import RateLimitExceeded
 from typing import Optional
 from configparser import ConfigParser
 
-from src.models import JobModel, UploadedPDBModel, SequenceCoverageModel
-from src.database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
-from src.processing import worker
-from src.rendering import get_annotations
-from src.helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+from models import JobModel, UploadedPDBModel, SequenceCoverageModel
+from database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
+from processing import worker
+from rendering import get_annotations
+from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
 
 load_dotenv('.env')  # load environmental variables from .env
 
@@ -99,6 +103,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# === Configure Prometheus metrics === #
+REQUEST_COUNTER = Counter("request_count", "Total number of requests", ["endpoint"])
+REQUEST_LATENCY = Histogram("request_latency_seconds", "Request latency in seconds", ["endpoint"])
+
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    endpoint = request.url.path
+    if endpoint in ["/job", "/external-job", "/protein-structure"]:
+        with REQUEST_LATENCY.labels(endpoint=endpoint).time():
+            response = await call_next(request)
+            REQUEST_COUNTER.labels(endpoint=endpoint).inc()
+            return response
+    return await call_next(request)
+
+@app.get("/metrics")
+async def get_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+@app.get("/metrics")
+async def get_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 def load_limiter_config():
@@ -270,8 +296,11 @@ async def get_protein_structure(request: Request, job_number: str = Form(None), 
             session.commit()
         with SessionLocalReadonly() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
-            if job is None:
-                raise HTTPException(status_code=404, detail="Job not found")
+            if protein_id is None:
+                raise HTTPException(status_code=404, detail="Protein structure not found")
+            if job_number is None:
+                structure = session.query(ProteinStructure).filter(protein_id == protein_id).first()
+                return structure
 
             seq_results = job.sequence_coverage_results
 

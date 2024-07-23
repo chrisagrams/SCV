@@ -41,7 +41,12 @@ class StringUUID(TypeDecorator):
         return str(value)
 
     def process_result_value(self, value, dialect):
-        return uuid.UUID(value)
+        if value is not None:
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                pass
+        return None
 
 
 class UploadedPDB(Base):
@@ -74,6 +79,9 @@ class Job(Base):
     background_color = Column(Integer)
     species = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    usis = Column(JSON)
+
     sequence_coverage_results = relationship('SequenceCoverageResult', secondary='job_seq_result',
                                              back_populates='jobs')
     pdb_file = relationship('UploadedPDB', back_populates='job')
@@ -86,6 +94,7 @@ class Job(Base):
             ptm_annotations=model.ptm_annotations,
             background_color=model.background_color,
             species=model.species,
+            usis=model.usis,
         )
 
 
