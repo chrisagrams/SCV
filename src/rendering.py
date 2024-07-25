@@ -256,8 +256,34 @@ def render_3d_from_pdb(pdb_file: str,
     }
 
 
-def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStructure:
-    ret = render_3d_from_pdb(pdb_file, pdb_name)
+def render_3d_from_pdb_str(pdb_str: str,
+                           pdb_name: str) -> dict:
+    """
+    Generate GLmol string for 3D visualization of protein coverage using a string of PDB (i.e. file upload)
+    :param pdb_str: string contents of PDB file
+    :param pdb_name: PDB Name
+    :return: dict
+    """
+
+    pymol_session = setup_pymol_from_string(pdb_str, pdb_name)
+
+    objs = get_objs(pymol_session, pdb_name)
+
+    view = get_view()
+
+    amino_ele_pos = get_amino_ele_pos_dict(pymol.cmd.get_pdbstr(pdb_name))
+
+    clean_pymol() # Cleanup
+
+    return {
+        'obj': objs,
+        'view': view,
+        'amino_ele_pos': amino_ele_pos,
+        'pdb_str': pdb_str
+    }
+
+
+def gen_db_model(ret, pdb_name, protein_id, species) -> ProteinStructure:
     protein_model = ProteinStructureModel.from_dict(ret)
     protein_model.protein_id = protein_id
     protein_model.pdb_id = pdb_name.split('.')[0]
@@ -266,51 +292,11 @@ def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStr
     return ProteinStructure.from_model(protein_model)
 
 
-if __name__ == "__main__":
-    pdb_file = "C:\\Users\\Chris\\Downloads\\protein-vis\\Protein-Vis\\pdbs\\UP000000589_10090_MOUSE\\AF-Q99JR5-F1-model_v1.pdb"
-    pdb_name = "AF-Q99JR5-F1-model_v1.pdb"
-
-    db_start = time.time()
-    engine = create_engine('sqlite:///../db/dev.db')  # create SQLAlchemy engine
-
-    Base.metadata.create_all(engine)  # create database tables
-
-    Session = sessionmaker(bind=engine)  # create session factory
-
-    session = Session()
-
-    job = session.query(Job).filter(Job.job_number == '0be41ee9-f644-43ab-9a9a-6997a7bc241d').first()
-
-    seq_result = session.query(SequenceCoverageResult).filter(SequenceCoverageResult.protein_id == "Q99JR5").first()
+def get_db_model_from_pdb(pdb_file, pdb_name, protein_id, species) -> ProteinStructure:
+    ret = render_3d_from_pdb(pdb_file, pdb_name)
+    return gen_db_model(ret, pdb_name, protein_id, species)
 
 
-    print(time.time() - db_start)
-
-    # get_objs(pdb_name)
-
-    start = time.time()
-    ret = render_3d_from_pdb(pdb_file,
-                             pdb_name,
-                             )
-
-    annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations, ret['amino_ele_pos'])
-
-    hsh = calc_hash_of_dict(ret)
-
-    # protein_model = ProteinStructureModel.from_dict(ret)
-    #
-    # protein_model.protein_id = seq_result.protein_id
-    # protein_model.pdb_id = 'AF-Q99JR5-F1-model_v1'
-    # protein_model.id = hsh
-    # protein_model.species = "mouse"
-    #
-    # protein_db_model = ProteinStructure.from_model(protein_model)
-    # session.add(protein_db_model)
-    # session.commit()
-    # session.close()
-
-
-    print(ret)
-
-    print(time.time() - start)
-
+def get_db_model_from_pdb_str(pdb_str, pdb_name, protein_id, species) -> ProteinStructure:
+    ret = render_3d_from_pdb_str(pdb_str, pdb_name)
+    return gen_db_model(ret, pdb_name, protein_id, species)

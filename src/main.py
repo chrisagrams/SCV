@@ -3,6 +3,8 @@ import json
 import os
 import logging
 import threading
+import traceback
+
 import pydantic
 import uuid
 from dotenv import load_dotenv
@@ -25,7 +27,7 @@ from starlette.responses import Response
 from models import JobModel, UploadedPDBModel, SequenceCoverageModel
 from database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
 from processing import worker
-from rendering import get_annotations
+from rendering import get_annotations, get_db_model_from_pdb_str
 from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
 
 load_dotenv('.env')  # load environmental variables from .env
@@ -108,6 +110,7 @@ app.add_middleware(
 REQUEST_COUNTER = Counter("request_count", "Total number of requests", ["endpoint"])
 REQUEST_LATENCY = Histogram("request_latency_seconds", "Request latency in seconds", ["endpoint"])
 
+
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
     endpoint = request.url.path
@@ -118,9 +121,11 @@ async def prometheus_middleware(request: Request, call_next):
             return response
     return await call_next(request)
 
+
 @app.get("/metrics")
 async def get_metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 @app.get("/metrics")
 async def get_metrics():
@@ -171,6 +176,38 @@ async def echo(request: Request, job: str = Form(None)):
     return {"job": job}
 
 
+def process_uploaded_pdb(session, file, species):
+    if file:
+        pdb_upload = UploadedPDBModel(
+            pdb_file=file.file.read(),
+            filesize=file.file._file.tell(),
+            filename=file.filename,
+            pdb_id=file.filename.split("-")[1])
+
+        # store PDB file in database
+        pdb_file = UploadedPDB.from_model(pdb_upload)
+        session.add(pdb_file)
+
+        # Generate structure
+        mdl = get_db_model_from_pdb_str(
+            pdb_str=pdb_file.pdb_file,
+            pdb_name=pdb_file.filename,
+            protein_id=pdb_file.pdb_id,
+            species=species
+        )
+
+        # Check if entry already exists
+        existing_entry = session.query(ProteinStructure).filter_by(id=mdl.id).first()
+        if existing_entry:
+            print(f"Entry with id \"{mdl.id}\" already exists in database.")
+        else:
+            session.merge(mdl)  # merge the object into the session
+            session.commit()
+            print(f"Added {pdb_file} to database as \"{mdl.id}.\"")
+
+        return mdl
+
+
 @app.post("/job")
 async def submit_job(request: Request, job: str = Form(...), file: Optional[UploadFile] = None):
     """
@@ -188,21 +225,6 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
 
         access = Access(ip=request.client.host, path=request.url.path, method=request.method)  # store request as access
 
-        pdb_file = None
-
-        if file:  # if a file was uploaded, store it in the database
-            logger.debug(f"Received file: {file.filename}")
-            if not file.filename.endswith(".pdb"):
-                raise HTTPException(status_code=400, detail="Uploaded file must be a PDB file.")
-            pdb_upload = UploadedPDBModel(
-                pdb_file=file.file.read(),
-                filesize=file.file._file.tell(),
-                filename=file.filename,
-                pdb_id=file.filename.split("-")[1])
-
-            # store PDB file in database
-            pdb_file = UploadedPDB.from_model(pdb_upload)
-
         with SessionLocal() as session:  # create session, locks database!
             session.add(new_job)  # add job to db
             session.commit()  # commit job to db
@@ -212,12 +234,12 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
             access.job_number = job_number  # add job number to access
             session.add(access)  # add access to db
 
-            if pdb_file:
-                pdb_file.job_number = job_number
-                session.add(pdb_file)
+            if file:  # if a file was uploaded, store it in the database
+                logger.debug(f"Received file: {file.filename}")
+                if not file.filename.endswith(".pdb"):
+                    raise HTTPException(status_code=400, detail="Uploaded file must be a PDB file.")
 
-                # Update job pdb_id
-                new_job.pdb_id = pdb_file.pdb_id
+                pdb_mdl = process_uploaded_pdb(session, file, new_job.species)
 
             session.commit()  # commit access and pdb file to db
 
@@ -234,8 +256,10 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
     except threading.ThreadError as te:
         raise HTTPException(status_code=500, detail="Internal error.")
     except SQLAlchemyError as se:
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal error.")
     except Exception as e:
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal error.")
 
 
