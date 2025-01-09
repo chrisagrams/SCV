@@ -14,10 +14,7 @@ A web application for protein sequence coverage 3D visualization.
 - [Description](#description)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-
+- [Configuration](#configuration)
 ## Dependencies
 Make sure you have the following dependencies installed before running the project:
 
@@ -38,21 +35,17 @@ To run this project locally using Docker, follow the steps below:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/chrisagrams/SCV_V1.1.git
-   cd SCV_V1.1
+   git clone https://github.com/chrisagrams/SCV.git
+   cd SCV
    ```
 
-2. Build the Docker image from the Dockerfile:
+2. Build and run docker-compose:
    
    ```bash
-   docker build -t scv .
+   docker compose up --build
    ```
 
-3. Run the Docker container, forwarding port 80 to 8080 (or any other port you wish to use) and attaching the db folder to the container:
-
-   ```bash
-   docker run -v ./db:/db -d -p 8080:80 scv
-   ```
+3. Once finished, navigate to [http://localhost:8080](http://localhost:8080). The API endpoints can be tested under [http://localhost:8080/docs](http://localhost:8080/docs)
    
 ## Configuration
 The application uses the following files for configuration: ".env", "rates.json", and "logging.ini".
