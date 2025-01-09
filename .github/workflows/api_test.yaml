@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag scv:latest
@@ -22,7 +22,7 @@ jobs:
       run: docker run --name scv_test_container scv:latest /bin/sh -c "pytest --cov=. && coverage xml -i"
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coverage.xml
