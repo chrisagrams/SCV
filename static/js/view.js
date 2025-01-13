@@ -225,15 +225,13 @@ let ptm_annotations;
 let background_color;
 let pdb_dest;
 let coverage_cards = [];
+let regex_dict = {}
 let ribbon_range;
 
 let coverage_color = '#FF3E3E';
 
-console.log(job);
-
 const get_anchor = () => {
   let curr_url = window.document.URL;
-  console.log(curr_url);
   let url_parts   = curr_url.split('#');
 
   return (url_parts.length > 1) ? url_parts[1] : null;
@@ -292,7 +290,6 @@ window.onload = () => {
       });
   })
   .then(json => {
-    console.log(json);
     show_legend(json['ptm_annotations']);
     background_color = json['background_color'];
     ptm_annotations = json['ptm_annotations'];
@@ -300,7 +297,6 @@ window.onload = () => {
     if ('usis' in json) {
       if(json['usis'] != null) {
         if(Object.keys(json['usis']).length > 0) {
-            console.log("USIs provided.");
             create_usi_section(json['usis']);
         }
       }
@@ -335,7 +331,6 @@ window.onload = () => {
   // Once both promises are resolved, update the UI
   Promise.all([jobDetailsPromise, proteinListPromise])
   .then(([jobDetailsResult, proteinListResult]) => {
-    console.log(proteinListResult);
     document.querySelector("#list_loading").classList.remove("spin-ani");
 
     // Sort by coverage
@@ -344,10 +339,9 @@ window.onload = () => {
     })
 
     proteinListResult.forEach(i => {
-      console.log(i);
       let c = new CoverageCard(
               i['protein_id'],
-              i['UNID'],
+              i['unid'],
               i['description'],
               i['coverage'] * 100, // convert to percent
               i['sequence_coverage'],
@@ -362,7 +356,6 @@ window.onload = () => {
     })
 
     // select first card
-    console.log(get_anchor());
     let selection = document.querySelector("#"+get_anchor());
     if (selection == null)
         selection = document.querySelector(".protein-card");
@@ -371,17 +364,9 @@ window.onload = () => {
 }
 
 document.onselectionchange = () => {
-  // console.log(getSelection());
-  // let selection = getSelection();
-  // console.log(selection);
   let seq_div = document.querySelector(".selected").querySelector(".sequence");
   let offset = getSelectionOffsetRelativeTo(seq_div);
   let length = window.getSelection().getRangeAt(0).toString().length;
-  console.log(offset);
-  console.log(length);
-  // if(length === 0)
-  //   removeHighlightMol(0, 255, 255);
-  // else
   let range = getRibbonRange();
   let max = seq_div.textContent.length;
   highlightMolRange(((offset+range['min'])/max)*range['max'], ((offset+length)/max)*range['max'], 0, 255, 255);
@@ -515,7 +500,6 @@ const toggle_autorotate = () => {
 }
 
 const fetch_mol = (protein_id) => {
-  // console.log(input);
   let form = new FormData();
   form.append('job_number', job);
   form.append('protein_id', protein_id);
@@ -555,7 +539,6 @@ const clear_selected = () => {
 const prom_handle = (prom) => {
   prom
       .then(response => {
-      // console.log(response);
       document.querySelector('#molloading').classList.remove('spin-ani');
       draw_mol(response.pdb_str, response.ret);
       let coverage_rgb = hexToRgb(coverage_color);
@@ -575,7 +558,6 @@ const prom_handle = (prom) => {
 }
 
 const rotate = (r, dx ,dy) => {
-  // console.log("r: " + r + " dx: " + dx + " dy: " + dy);
   let rs = Math.sin(r * Math.PI) / r;
   glmol01.dq.x = Math.cos(r * Math.PI);
   glmol01.dq.y = 0;
@@ -648,17 +630,13 @@ const update_regex_dict = (index, arr) => {
 const updateMolColor = (index, r, g, b) => {
   let rep = document.querySelector('#glmol01_rep');
   let og_text = rep.textContent;
-  // console.log(og_text);
   const re = new RegExp('color:(\\d.\\d+),(\\d.\\d+),(\\d.\\d+)', 'g');
   let matches = Array.from(og_text.matchAll(re));
-  // console.log(matches[index]);
-  // console.log(matches);
   if(matches[index] !== undefined) {
     let start_index = matches[index].index;
     let res_text = og_text.substring(0, start_index) +
             'color:' + (r / 255).toFixed(2) + ',' + (g / 255).toFixed(2) + ',' + (b / 255).toFixed(2) +
             og_text.substring(start_index + matches[index][0].length);
-    // console.log(res_text);
     rep.textContent = res_text;
     rebuild_glmol();
   }
@@ -674,7 +652,6 @@ const highlightMol = (pos, r, g, b) => {
     res += rep.substring(0, str_index);
     res += 'color:' + (r / 255).toFixed(2) + ',' + (g / 255).toFixed(2) + ',' + (b / 255).toFixed(2) + ":" + (pos - 10) + '-' + (pos + 10) + '\n';
     res += rep.substring(str_index);
-    // console.log(res);
   }
   else {
     let view_index = rep.indexOf('view:');
@@ -696,7 +673,6 @@ const highlightMolRange = (start, end, r, g, b) => {
     res += rep.substring(0, str_index);
     res += 'color:' + (r / 255).toFixed(2) + ',' + (g / 255).toFixed(2) + ',' + (b / 255).toFixed(2) + ":" + start + '-' + end + '\n';
     res += rep.substring(str_index);
-    // console.log(res);
   }
   else {
     let view_index = rep.indexOf('view:');
