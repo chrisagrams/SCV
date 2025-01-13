@@ -23,15 +23,27 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from models import JobModel, UploadedPDBModel, SequenceCoverageModel
-from database import Job, Access, Base, ProteinStructure, UploadedPDB, SequenceCoverageResult
+from database import (
+    Job,
+    Access,
+    Base,
+    ProteinStructure,
+    UploadedPDB,
+    SequenceCoverageResult,
+)
 from processing import worker
 from rendering import get_annotations
-from helpers import pymol_view_dict_to_str, pymol_obj_dict_to_str, color_dict_to_str, calc_hash_of_dict
+from helpers import (
+    pymol_view_dict_to_str,
+    pymol_obj_dict_to_str,
+    color_dict_to_str,
+    calc_hash_of_dict,
+)
 
-load_dotenv('.env')  # load environmental variables from .env
+load_dotenv(".env")  # load environmental variables from .env
 
 log_config = ConfigParser()  # load logging configuration
-log_config.read('./logging.ini')
+log_config.read("./logging.ini")
 
 app = FastAPI(
     title="scvAPI",
@@ -44,11 +56,19 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-if os.getenv('ENVIRONMENT') == 'development':
-    app.mount("/html", StaticFiles(directory="./static/html"), name="html")  # for development only
-    app.mount("/css", StaticFiles(directory="./static/css"), name="css")  # for development only
-    app.mount("/js", StaticFiles(directory="./static/js"), name="js")  # for development only
-    app.mount("/vendor/js", StaticFiles(directory="./vendor/js"), name="js")  # for development only
+if os.getenv("ENVIRONMENT") == "development":
+    app.mount(
+        "/html", StaticFiles(directory="./static/html"), name="html"
+    )  # for development only
+    app.mount(
+        "/css", StaticFiles(directory="./static/css"), name="css"
+    )  # for development only
+    app.mount(
+        "/js", StaticFiles(directory="./static/js"), name="js"
+    )  # for development only
+    app.mount(
+        "/vendor/js", StaticFiles(directory="./vendor/js"), name="js"
+    )  # for development only
 
 # === Configure logger === #
 
@@ -88,7 +108,7 @@ logger.addHandler(file_handler)
 
 # === Configure database === #
 
-engine = create_engine(os.getenv('DATABASE_URL'))  # create SQLAlchemy engine
+engine = create_engine(os.getenv("DATABASE_URL"))  # create SQLAlchemy engine
 
 Base.metadata.create_all(engine)  # create database tables
 
@@ -104,7 +124,10 @@ app.add_middleware(
 
 # === Configure Prometheus metrics === #
 REQUEST_COUNTER = Counter("request_count", "Total number of requests", ["endpoint"])
-REQUEST_LATENCY = Histogram("request_latency_seconds", "Request latency in seconds", ["endpoint"])
+REQUEST_LATENCY = Histogram(
+    "request_latency_seconds", "Request latency in seconds", ["endpoint"]
+)
+
 
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
@@ -116,9 +139,11 @@ async def prometheus_middleware(request: Request, call_next):
             return response
     return await call_next(request)
 
+
 @app.get("/metrics")
 async def get_metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 @app.get("/metrics")
 async def get_metrics():
@@ -159,7 +184,9 @@ async def echo(request: Request, job: str = Form(None)):
     """
     logger.info(f"/test received job ID: {job}")
     try:
-        access = Access(ip=request.client.host, path=request.url.path, method=request.method)
+        access = Access(
+            ip=request.client.host, path=request.url.path, method=request.method
+        )
         with SessionLocal() as session:
             session.add(access)
             session.commit()
@@ -170,7 +197,9 @@ async def echo(request: Request, job: str = Form(None)):
 
 
 @app.post("/job")
-async def submit_job(request: Request, job: str = Form(...), file: Optional[UploadFile] = None):
+async def submit_job(
+    request: Request, job: str = Form(...), file: Optional[UploadFile] = None
+):
     """
     Endpoint for submitting a job to the API. Accepts a JSON string containing the job data, and an optional PDB file.
     Starts a worker thread to process the job.
@@ -184,19 +213,24 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
 
         new_job = Job.from_model(job_data)  # convert JobModel to Job
 
-        access = Access(ip=request.client.host, path=request.url.path, method=request.method)  # store request as access
+        access = Access(
+            ip=request.client.host, path=request.url.path, method=request.method
+        )  # store request as access
 
         pdb_file = None
 
         if file:  # if a file was uploaded, store it in the database
             logger.debug(f"Received file: {file.filename}")
             if not file.filename.endswith(".pdb"):
-                raise HTTPException(status_code=400, detail="Uploaded file must be a PDB file.")
+                raise HTTPException(
+                    status_code=400, detail="Uploaded file must be a PDB file."
+                )
             pdb_upload = UploadedPDBModel(
                 pdb_file=file.file.read(),
                 filesize=file.file._file.tell(),
                 filename=file.filename,
-                pdb_id=file.filename.split("-")[1])
+                pdb_id=file.filename.split("-")[1],
+            )
 
             # store PDB file in database
             pdb_file = UploadedPDB.from_model(pdb_upload)
@@ -220,13 +254,21 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
             session.commit()  # commit access and pdb file to db
 
         # Start worker thread, pass session factory to worker
-        t = threading.Thread(target=worker, args=(job_number, SessionLocal(),))
+        t = threading.Thread(
+            target=worker,
+            args=(
+                job_number,
+                SessionLocal(),
+            ),
+        )
         t.start()
 
         return {"job_number": job_number}
 
     except json.JSONDecodeError:  # if JSON is invalid
-        raise HTTPException(status_code=400, detail=[{"type": "decode_error", "msg": "Invalid JSON"}])
+        raise HTTPException(
+            status_code=400, detail=[{"type": "decode_error", "msg": "Invalid JSON"}]
+        )
     except pydantic.ValidationError as ve:  # if JobModel or UploadedPDBModel is invalid
         raise HTTPException(status_code=400, detail=json.loads(ve.json()))
     except threading.ThreadError as te:
@@ -240,7 +282,12 @@ async def submit_job(request: Request, job: str = Form(...), file: Optional[Uplo
 @app.post("/job_details")
 async def get_job_details(request: Request, job_number: str = Form(None)):
     try:
-        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        access = Access(
+            ip=request.client.host,
+            path=request.url.path,
+            method=request.method,
+            job_number=job_number,
+        )
         with SessionLocal() as session:
             session.add(access)
             session.commit()
@@ -259,7 +306,12 @@ async def get_job_details(request: Request, job_number: str = Form(None)):
 @app.post("/protein-list")
 async def get_protein_list(request: Request, job_number: str = Form(None)):
     try:
-        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        access = Access(
+            ip=request.client.host,
+            path=request.url.path,
+            method=request.method,
+            job_number=job_number,
+        )
         with SessionLocal() as session:
             session.add(access)
             session.commit()
@@ -271,9 +323,16 @@ async def get_protein_list(request: Request, job_number: str = Form(None)):
             seq_results = job.sequence_coverage_results
 
             for seq_result in seq_results:
-                structure = session.query(ProteinStructure).filter(
-                    and_(ProteinStructure.protein_id == seq_result.protein_id,
-                         ProteinStructure.species == job.species)).first()
+                structure = (
+                    session.query(ProteinStructure)
+                    .filter(
+                        and_(
+                            ProteinStructure.protein_id == seq_result.protein_id,
+                            ProteinStructure.species == job.species,
+                        )
+                    )
+                    .first()
+                )
                 if structure is None:
                     seq_result.has_pdb = False
                 else:
@@ -286,43 +345,72 @@ async def get_protein_list(request: Request, job_number: str = Form(None)):
 
 
 @app.post("/protein-structure")
-async def get_protein_structure(request: Request, job_number: str = Form(None), protein_id: str = Form(None)):
+async def get_protein_structure(
+    request: Request, job_number: str = Form(None), protein_id: str = Form(None)
+):
     try:
-        access = Access(ip=request.client.host, path=request.url.path, method=request.method, job_number=job_number)
+        access = Access(
+            ip=request.client.host,
+            path=request.url.path,
+            method=request.method,
+            job_number=job_number,
+        )
         with SessionLocal() as session:
             session.add(access)
             session.commit()
         with SessionLocal() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
             if protein_id is None:
-                raise HTTPException(status_code=404, detail="Protein structure not found")
+                raise HTTPException(
+                    status_code=404, detail="Protein structure not found"
+                )
             if job_number is None:
-                structure = session.query(ProteinStructure).filter(protein_id == protein_id).first()
+                structure = (
+                    session.query(ProteinStructure)
+                    .filter(protein_id == protein_id)
+                    .first()
+                )
                 return structure
 
             seq_results = job.sequence_coverage_results
 
             for seq_result in seq_results:
                 if seq_result.protein_id == protein_id:
-                    structure = session.query(ProteinStructure).filter(and_(ProteinStructure.protein_id == protein_id,
-                                                                            ProteinStructure.species == job.species)).first()
+                    structure = (
+                        session.query(ProteinStructure)
+                        .filter(
+                            and_(
+                                ProteinStructure.protein_id == protein_id,
+                                ProteinStructure.species == job.species,
+                            )
+                        )
+                        .first()
+                    )
                     if structure is None:
-                        raise HTTPException(status_code=404, detail="Protein structure not found")
+                        raise HTTPException(
+                            status_code=404, detail="Protein structure not found"
+                        )
 
-                    annotations = get_annotations(seq_result.sequence_coverage, seq_result.ptms, job.ptm_annotations,
-                                                  structure.amino_ele_pos)
+                    annotations = get_annotations(
+                        seq_result.sequence_coverage,
+                        seq_result.ptms,
+                        job.ptm_annotations,
+                        structure.amino_ele_pos,
+                    )
 
-                    ret = pymol_obj_dict_to_str(structure.objs) + \
-                          color_dict_to_str(annotations) + \
-                          pymol_view_dict_to_str(structure.view) + \
-                          f"bgcolor:{job.background_color}"
+                    ret = (
+                        pymol_obj_dict_to_str(structure.objs)
+                        + color_dict_to_str(annotations)
+                        + pymol_view_dict_to_str(structure.view)
+                        + f"bgcolor:{job.background_color}"
+                    )
 
                     return {
                         # "view": structure.view,
                         # "objs": structure.objs,
                         # "annotations": annotations,
                         "pdb_str": structure.pdb_str,
-                        "ret": ret
+                        "ret": ret,
                     }
 
         raise HTTPException(status_code=404, detail="Protein structure not found")
@@ -332,9 +420,9 @@ async def get_protein_structure(request: Request, job_number: str = Form(None), 
 
 
 @app.post("/external-job")
-async def external_job(request: Request,
-                       sequence_model: SequenceCoverageModel,
-                       job_model: JobModel):
+async def external_job(
+    request: Request, sequence_model: SequenceCoverageModel, job_model: JobModel
+):
     try:
         if sequence_model is None:
             raise HTTPException(status_code=500, detail="Sequence model not provided")
@@ -354,11 +442,16 @@ async def external_job(request: Request,
             sequence_model.id = calc_hash_of_dict(seq_dict)
 
             # Check if hash exists. If it does, don't make a new model.
-            seq_cov_res = session.query(SequenceCoverageResult).filter(
-                SequenceCoverageResult.id == sequence_model.id).first()
+            seq_cov_res = (
+                session.query(SequenceCoverageResult)
+                .filter(SequenceCoverageResult.id == sequence_model.id)
+                .first()
+            )
 
             if seq_cov_res is None:
-                new_sequence_coverage = SequenceCoverageResult.from_model(sequence_model)
+                new_sequence_coverage = SequenceCoverageResult.from_model(
+                    sequence_model
+                )
                 new_job.sequence_coverage = new_sequence_coverage
                 new_sequence_coverage.jobs.append(new_job)
                 session.add(new_sequence_coverage)
