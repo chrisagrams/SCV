@@ -89,12 +89,10 @@ logger.addHandler(file_handler)
 # === Configure database === #
 
 engine = create_engine(os.getenv('DATABASE_URL'))  # create SQLAlchemy engine
-engine_readonly = create_engine(os.getenv('DATABASE_URL') + "?mode=ro")  # create SQLAlchemy engine for readonly access
 
 Base.metadata.create_all(engine)  # create database tables
 
 SessionLocal = sessionmaker(bind=engine)  # create session factory
-SessionLocalReadonly = sessionmaker(bind=engine_readonly)  # create session factory for readonly access
 
 # Add CORS middleware to allow requests from any origin
 app.add_middleware(
@@ -247,7 +245,7 @@ async def get_job_details(request: Request, job_number: str = Form(None)):
             session.add(access)
             session.commit()
 
-        with SessionLocalReadonly() as session:
+        with SessionLocal() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
             if job is None:
                 raise HTTPException(status_code=404, detail="Job not found")
@@ -265,7 +263,7 @@ async def get_protein_list(request: Request, job_number: str = Form(None)):
         with SessionLocal() as session:
             session.add(access)
             session.commit()
-        with SessionLocalReadonly() as session:
+        with SessionLocal() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
             if job is None:
                 raise HTTPException(status_code=404, detail="Job not found")
@@ -294,7 +292,7 @@ async def get_protein_structure(request: Request, job_number: str = Form(None), 
         with SessionLocal() as session:
             session.add(access)
             session.commit()
-        with SessionLocalReadonly() as session:
+        with SessionLocal() as session:
             job = session.query(Job).filter(Job.job_number == job_number).first()
             if protein_id is None:
                 raise HTTPException(status_code=404, detail="Protein structure not found")

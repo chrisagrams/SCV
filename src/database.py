@@ -105,7 +105,7 @@ class SequenceCoverageResult(Base):
     protein_id = Column(Text)
     coverage = Column(Double)
     sequence = Column(Text)
-    UNID = Column(Text)
+    unid = Column(Text)
     description = Column(Text)
     sequence_coverage = Column(JSON)
     ptms = Column(JSON)
@@ -119,7 +119,7 @@ class SequenceCoverageResult(Base):
             protein_id=model.protein_id,
             coverage=model.coverage,
             sequence=model.sequence,
-            UNID=model.UNID,
+            unid=model.unid,
             description=model.description,
             sequence_coverage=model.sequence_coverage,
             ptms=model.ptms,
@@ -174,7 +174,7 @@ class FASTA_Entry(Base):
 class Access(Base):
     __tablename__ = 'access'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     ip = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
     path = Column(String)

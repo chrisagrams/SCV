@@ -347,7 +347,7 @@ window.onload = () => {
       console.log(i);
       let c = new CoverageCard(
               i['protein_id'],
-              i['UNID'],
+              i['unid'],
               i['description'],
               i['coverage'] * 100, // convert to percent
               i['sequence_coverage'],

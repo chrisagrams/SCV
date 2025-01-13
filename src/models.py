@@ -93,7 +93,7 @@ class SequenceCoverageModel(BaseModel):
     protein_id: str = None
     coverage: float = None
     sequence: str = None
-    UNID: str = None
+    unid: str = None
     description: str = None
     sequence_coverage: list = None
     ptms: dict = None
@@ -113,7 +113,7 @@ class SequenceCoverageModel(BaseModel):
             'protein_id': obj.protein_id,
             'coverage': obj.coverage,
             'sequence': obj.sequence,
-            'UNID': obj.UNID,
+            'unid': obj.unid,
             'description': obj.description,
             'sequence_coverage': obj.sequence_coverage,
             'ptms': obj.ptms,
