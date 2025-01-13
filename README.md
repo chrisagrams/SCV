@@ -1,5 +1,5 @@
 # SCV - Sequence Coverage Visualizer
-[![Tests](https://github.com/chrisagrams/SCV_V1.1/actions/workflows/api_test.yaml/badge.svg)](https://github.com/chrisagrams/SCV_V1.1/actions/workflows/api_test.yaml)
+[![Tests](https://github.com/chrisagrams/SCV/actions/workflows/runner.yaml/badge.svg)](https://github.com/chrisagrams/SCV/actions/workflows/runner.yaml)
 
 A web application for protein sequence coverage 3D visualization.
 
