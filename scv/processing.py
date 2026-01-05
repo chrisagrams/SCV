@@ -4,9 +4,9 @@ import re
 import numpy as np
 import ahocorasick
 
-from database import Job, SequenceCoverageResult, FASTA_Entry
-from models import SequenceCoverageModel
-from helpers import fasta_reader, calc_hash_of_dict
+from scv.database import Job, SequenceCoverageResult, FASTA_Entry
+from scv.models import SequenceCoverageModel
+from scv.helpers import fasta_reader, calc_hash_of_dict
 
 
 def generate_peptide_psm_dict(psm_dict, regex_dict):

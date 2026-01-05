@@ -11,15 +11,15 @@ from collections import defaultdict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database import Base, Job, SequenceCoverageResult, ProteinStructure
-from helpers import (
+from scv.database import Base, Job, SequenceCoverageResult, ProteinStructure
+from scv.helpers import (
     pymol_obj_extract,
     pymol_obj_dict_to_str,
     pymol_view_dict_to_str,
     color_dict_to_str,
     calc_hash_of_dict,
 )
-from models import ProteinStructureModel
+from scv.models import ProteinStructureModel
 
 default_covered = [255, 62, 62]
 default_non_covered = [221, 221, 221]

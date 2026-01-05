@@ -11,12 +11,12 @@ from tqdm import tqdm
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from scv.database import Base, ProteinStructure
+from scv.rendering import get_db_model_from_pdb
+
 # Configure logging
 logging.basicConfig(filename="process_pdb_log.txt", format='%(message)s', level=logging.INFO)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.database import Base, ProteinStructure
-from src.rendering import get_db_model_from_pdb
 
 load_dotenv('../.env')  # load environmental variables from .env
 

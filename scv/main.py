@@ -22,8 +22,8 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from models import JobModel, UploadedPDBModel, SequenceCoverageModel
-from database import (
+from scv.models import JobModel, UploadedPDBModel, SequenceCoverageModel
+from scv.database import (
     Job,
     Access,
     Base,
@@ -31,9 +31,9 @@ from database import (
     UploadedPDB,
     SequenceCoverageResult,
 )
-from processing import worker
-from rendering import get_annotations
-from helpers import (
+from scv.processing import worker
+from scv.rendering import get_annotations
+from scv.helpers import (
     pymol_view_dict_to_str,
     pymol_obj_dict_to_str,
     color_dict_to_str,

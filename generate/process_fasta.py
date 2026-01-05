@@ -3,8 +3,8 @@ import argparse
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.database import Base, FASTA_Entry
-from src.helpers import fasta_reader
+from scv.database import Base, FASTA_Entry
+from scv.helpers import fasta_reader
 
 load_dotenv('../.env')  # load environmental variables from .env
 

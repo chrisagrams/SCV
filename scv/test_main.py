@@ -1,6 +1,6 @@
 import uuid
 from fastapi.testclient import TestClient
-from main import app
+from scv.main import app
 
 client = TestClient(app)
 
