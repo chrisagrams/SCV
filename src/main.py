@@ -48,7 +48,7 @@ log_config.read("./logging.ini")
 app = FastAPI(
     title="scvAPI",
     description="API for the SCV web application.",
-    version="1.2.0",
+    version="1.4.0",
 )  # create FastAPI instance
 
 limiter = Limiter(key_func=get_remote_address)  # create rate limiter
