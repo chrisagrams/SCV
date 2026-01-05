@@ -2,3 +2,5 @@ db/
 .idea/
 .env
 scv.log
+__pycache__/
+.env
